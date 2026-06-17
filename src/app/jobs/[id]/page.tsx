@@ -5,7 +5,6 @@ import { requireUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/permissions";
 import { num, thaiDate } from "@/lib/format";
 import {
-  JOB_STAGE,
   DESIGN_STATUS,
   PLATE_STATUS,
   PRODUCTION_STATUS,
@@ -13,7 +12,8 @@ import {
   SHIPMENT_STATUS,
   optLabel,
 } from "@/lib/labels";
-import { STAGE_ORDER } from "@/lib/jobs";
+import { computeJobProgress } from "@/lib/job-progress";
+import JobProgressBar from "@/components/JobProgressBar";
 
 export const dynamic = "force-dynamic";
 
@@ -37,42 +37,26 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
   });
   if (!job) notFound();
 
-  const stages = STAGE_ORDER;
-  const currentIdx = stages.indexOf(job.stage as (typeof stages)[number]);
+  const progressSteps = computeJobProgress(job);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <Link href="/" className="text-sm text-brand-600 hover:underline">← หน้าหลัก</Link>
 
       <div className="card p-6">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-lg font-bold text-slate-800">{job.code}</div>
             <div className="text-sm text-slate-500">{job.customer.name} · {job.title}</div>
           </div>
           <div className="text-right text-sm">
-            <Badge o={JOB_STAGE[job.stage] ?? JOB_STAGE.prepress} />
-            <div className="mt-1 text-xs text-slate-400">จำนวน {num(job.quantity)} ชิ้น</div>
+            <div className="text-xs text-slate-400">จำนวน {num(job.quantity)} ชิ้น</div>
           </div>
         </div>
 
-        {/* แถบความคืบหน้า */}
-        <div className="mt-5 flex items-center">
-          {stages.map((s, i) => (
-            <div key={s} className="flex flex-1 items-center last:flex-none">
-              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                i <= currentIdx ? "bg-brand-600 text-white" : "bg-slate-200 text-slate-500"
-              }`}>
-                {i + 1}
-              </div>
-              {i < stages.length - 1 && (
-                <div className={`mx-1 h-0.5 flex-1 ${i < currentIdx ? "bg-brand-600" : "bg-slate-200"}`} />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="mt-1 flex justify-between text-[11px] text-slate-400">
-          {stages.map((s) => <span key={s}>{JOB_STAGE[s]?.label}</span>)}
+        <div className="mt-6 border-t border-line pt-5">
+          <div className="mb-3 text-xs font-medium text-slate-400">ความคืบหน้างาน</div>
+          <JobProgressBar steps={progressSteps} />
         </div>
       </div>
 
@@ -113,6 +97,7 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
           {can(user.role, "viewCost") && (
             <Link href={`/costing/${job.id}`} className="text-rose-600 hover:underline">ดูต้นทุนงานนี้</Link>
           )}
+          <Link href="/jobs/progress-demo" className="text-brand-600 hover:underline">ดูตัวอย่าง progress bar</Link>
         </div>
       </div>
     </div>
