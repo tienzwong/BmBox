@@ -1,0 +1,142 @@
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { baht, num, thaiDate } from "@/lib/format";
+import SalesChart, { type SalesPoint } from "@/components/SalesChart";
+import { requireUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/permissions";
+
+export const dynamic = "force-dynamic";
+
+const THAI_MONTH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+function monthlySales(rows: { issueDate: Date; total: number }[], months = 6): SalesPoint[] {
+  const now = new Date();
+  const buckets: SalesPoint[] = [];
+  const index = new Map<string, number>();
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    index.set(key, buckets.length);
+    buckets.push({
+      label: `${THAI_MONTH[d.getMonth()]} ${String((d.getFullYear() + 543) % 100).padStart(2, "0")}`,
+      value: 0,
+      count: 0,
+    });
+  }
+  for (const r of rows) {
+    const d = new Date(r.issueDate);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const idx = index.get(key);
+    if (idx != null) {
+      buckets[idx].value += r.total;
+      buckets[idx].count += 1;
+    }
+  }
+  return buckets;
+}
+
+export default async function Dashboard() {
+  const user = await requireUser();
+  const showPrice = can(user.role, "viewPrice");
+  const [qCount, pCount, cCount, sumAgg, recent, allForChart] = await Promise.all([
+    prisma.quotation.count({ where: { isPattern: false } }),
+    prisma.paper.count({ where: { active: true } }),
+    prisma.customer.count(),
+    prisma.quotation.aggregate({ _sum: { total: true }, where: { isPattern: false, status: "accepted" } }),
+    prisma.quotation.findMany({
+      where: { isPattern: false },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      include: { customer: true },
+    }),
+    prisma.quotation.findMany({ where: { isPattern: false, status: "accepted" }, select: { issueDate: true, total: true } }),
+  ]);
+
+  const chartData = monthlySales(allForChart, 6);
+  const chartTotal = chartData.reduce((s, d) => s + d.value, 0);
+
+  const stats = [
+    { label: "ใบเสนอราคา", value: num(qCount), href: "/quotations" },
+    ...(showPrice ? [{ label: "มูลค่ารวม", value: baht(sumAgg._sum.total ?? 0), href: "/quotations" }] : []),
+    { label: "ชนิดกระดาษ", value: num(pCount), href: "/papers" },
+    { label: "ลูกค้า", value: num(cCount), href: "/customers" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-slate-800">ภาพรวม</h1>
+        <p className="text-sm text-slate-500">BmBox ERP — เบลสโมทีฟ จำกัด</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {stats.map((s) => (
+          <Link key={s.label} href={s.href} className="card p-5 transition hover:border-brand-300">
+            <div className="text-xs text-slate-400">{s.label}</div>
+            <div className="mt-1 text-2xl font-bold text-slate-800">{s.value}</div>
+          </Link>
+        ))}
+      </div>
+
+      {showPrice && (
+        <div className="card p-5">
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-700">ยอดขายรายเดือน</h2>
+              <p className="text-xs text-slate-400">6 เดือนล่าสุด · มูลค่าจากใบเสนอราคา</p>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-slate-400">รวมในช่วง</div>
+              <div className="text-lg font-bold text-brand-700">{baht(chartTotal)}</div>
+            </div>
+          </div>
+          <SalesChart data={chartData} />
+        </div>
+      )}
+
+      <div className="card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3">
+          <h2 className="text-sm font-semibold text-slate-700">ใบเสนอราคาล่าสุด</h2>
+          <Link href="/quotations" className="text-xs text-brand-600 hover:underline">
+            ดูทั้งหมด
+          </Link>
+        </div>
+        {recent.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-400">
+            ยังไม่มีใบเสนอราคา ·{" "}
+            <Link href="/quotations/new" className="text-brand-600 hover:underline">
+              สร้างใบแรก
+            </Link>
+          </div>
+        ) : (
+          <div className="table-scroll">
+            <table>
+            <thead className="bg-slate-50 text-left text-xs text-slate-400">
+              <tr>
+                <th className="px-5 py-2 font-medium">เลขที่</th>
+                <th className="px-5 py-2 font-medium">ลูกค้า</th>
+                <th className="px-5 py-2 font-medium">วันที่</th>
+                {showPrice && <th className="px-5 py-2 text-right font-medium">ยอดรวม</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {recent.map((q) => (
+                <tr key={q.id} className="border-t border-line hover:bg-slate-50">
+                  <td className="px-5 py-3">
+                    <Link href={`/quotations/${q.id}`} className="font-medium text-brand-700 hover:underline">
+                      {q.number}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-3 text-slate-600">{q.customer.name}</td>
+                  <td className="px-5 py-3 text-slate-500">{thaiDate(q.issueDate)}</td>
+                  {showPrice && <td className="px-5 py-3 text-right font-medium text-slate-700">{baht(q.total)}</td>}
+                </tr>
+              ))}
+            </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

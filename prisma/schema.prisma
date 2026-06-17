@@ -1,0 +1,287 @@
+// BmBox ERP - Prisma schema
+// บริษัท เบลสโมทีฟ จำกัด (BmBox) - โรงพิมพ์แพคเกจจิ้งกระดาษ
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// ผู้ใช้งานระบบ (แยกตามแผนก/บทบาท เพื่อคุมการมองเห็นต้นทุน)
+model User {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  passwordHash String
+  name         String
+  role         String // admin | management | sales | accounting | production
+  department   String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  sessions     Session[]
+}
+
+model Session {
+  id        String   @id // token แบบสุ่ม ใช้เป็นค่าใน cookie
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Customer {
+  id         Int         @id @default(autoincrement())
+  name       String
+  taxId      String?
+  address    String?
+  phone      String?
+  email      String?
+  contact    String?
+  createdAt  DateTime    @default(now())
+  quotations Quotation[]
+  jobs       Job[]
+}
+
+/// ชนิดกระดาษ + ขนาดแผ่นใหญ่ที่ซื้อเข้ามา (หน่วย: เซนติเมตร)
+model Paper {
+  id          Int     @id @default(autoincrement())
+  name        String // เช่น อาร์ตการ์ด 350 แกรม
+  grammage    Int // แกรม (gsm)
+  sheetW      Float // ความกว้างแผ่นใหญ่ (ซม.)
+  sheetH      Float // ความยาวแผ่นใหญ่ (ซม.)
+  pricePerKg  Float? // ราคาต่อกิโลกรัม (บาท)
+  pricePerSheet Float? // ราคาต่อแผ่น (บาท) - ใช้ก่อนถ้ามี
+  active      Boolean @default(true)
+  createdAt   DateTime @default(now())
+  items       QuotationItem[]
+}
+
+/// เครื่องพิมพ์ออฟเซ็ต — กำหนดขนาดพิมพ์สูงสุด (ตัด 4 / ตัด 2 ฯลฯ)
+model Press {
+  id            Int     @id @default(autoincrement())
+  name          String // เช่น เครื่องตัด 4, เครื่องตัด 2
+  maxW          Float // ขนาดพิมพ์สูงสุด กว้าง (ซม.)
+  maxH          Float // ขนาดพิมพ์สูงสุด ยาว (ซม.)
+  gripper       Float   @default(1)
+  platePerColor Float   @default(250)
+  printPer1000  Float   @default(350)
+  active        Boolean @default(true)
+  createdAt     DateTime @default(now())
+  items         QuotationItem[]
+}
+
+model Quotation {
+  id          Int      @id @default(autoincrement())
+  number      String   @unique
+  customerId  Int
+  customer    Customer @relation(fields: [customerId], references: [id])
+  issueDate   DateTime @default(now())
+  validDays   Int      @default(30)
+  status      String   @default("estimating") // estimating | accepted | cancelled (เดิม: draft|sent|accepted|rejected)
+  note        String?
+  // ข้อมูลงานประเมิน (Job Estimate)
+  title       String? // ชื่องาน
+  jobType     String? // ลักษณะงานพิมพ์ (หนังสือ/แผ่นปลิว/แผ่นพับ ฯลฯ)
+  specDetail  String? // รายละเอียด Spec ที่ลูกค้ากำหนด
+  salesperson String? // พนักงานขายผู้รับผิดชอบ
+  // แม่แบบ + วงจรรับงาน
+  isPattern   Boolean  @default(false) // PTA: บันทึกเป็นแม่แบบงานที่สั่งบ่อย
+  acceptedQty Int? // ยอดพิมพ์ที่ลูกค้าเลือกตอนรับงาน
+  soNumber    String? // เลขใบสั่งซื้อ (SO) ออกตอนรับงาน
+  vatPercent  Float    @default(7)
+  discount    Float    @default(0)
+  subtotal    Float    @default(0)
+  vatAmount   Float    @default(0)
+  total       Float    @default(0)
+  createdAt   DateTime @default(now())
+  items       QuotationItem[]
+  quantities  QuoteQuantity[]
+  jobs        Job[]
+}
+
+/// ยอดพิมพ์ที่ต้องการเปรียบเทียบ (สูงสุด 4 ค่าต่อใบประเมิน)
+model QuoteQuantity {
+  id          Int       @id @default(autoincrement())
+  quotationId Int
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  qty         Int
+  label       String?
+  sortOrder   Int       @default(0)
+}
+
+// ===========================================================================
+// งานกลาง (Job/ใบสั่งงาน) — เชื่อมการทำงานข้ามแผนก
+// แต่ละแผนกมีตารางของตัวเอง (1:1 กับ Job) แก้ schema ของแผนกตัวเองได้อิสระ
+// ===========================================================================
+model Job {
+  id          Int         @id @default(autoincrement())
+  code        String      @unique // JOB-YYMM-####
+  quotationId Int?
+  quotation   Quotation?  @relation(fields: [quotationId], references: [id])
+  customerId  Int
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  title       String
+  quantity    Int         @default(0)
+  stage       String      @default("prepress") // prepress|production|postpress|shipping|done
+  status      String      @default("open") // open|hold|done|cancelled
+  dueDate     DateTime?
+  note        String?
+  createdAt   DateTime    @default(now())
+
+  prepress    Prepress?
+  production  Production?
+  postpress   Postpress?
+  shipment    Shipment?
+  costEntries CostEntry[]
+}
+
+model Prepress {
+  id           Int      @id @default(autoincrement())
+  jobId        Int      @unique
+  job          Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  designStatus String   @default("waiting") // waiting|designing|proofing|approved
+  plateStatus  String   @default("waiting") // waiting|making|done
+  assignee     String?
+  note         String?
+  updatedAt    DateTime @updatedAt
+}
+
+model Production {
+  id           Int      @id @default(autoincrement())
+  jobId        Int      @unique
+  job          Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  pressName    String?
+  plannedSheets Int     @default(0)
+  printedSheets Int     @default(0)
+  status       String   @default("queued") // queued|printing|done
+  note         String?
+  updatedAt    DateTime @updatedAt
+}
+
+model Postpress {
+  id        Int      @id @default(autoincrement())
+  jobId     Int      @unique
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  processes String   @default("[]") // JSON: [{name, done}]
+  status    String   @default("queued") // queued|working|done
+  note      String?
+  updatedAt DateTime @updatedAt
+}
+
+model Shipment {
+  id         Int       @id @default(autoincrement())
+  jobId      Int       @unique
+  job        Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  address    String?
+  carrier    String?
+  trackingNo String?
+  status     String    @default("preparing") // preparing|shipped|delivered
+  shippedAt  DateTime?
+  note       String?
+  updatedAt  DateTime  @updatedAt
+}
+
+model CostEntry {
+  id        Int      @id @default(autoincrement())
+  jobId     Int
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  category  String // paper|plate|ink|labor|outsource|other
+  amount    Float
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+// ===========================================================================
+// จัดซื้อ + คลังสินค้า (ค่อนข้างเป็นอิสระ)
+// ===========================================================================
+model Supplier {
+  id        Int             @id @default(autoincrement())
+  name      String
+  taxId     String?
+  phone     String?
+  contact   String?
+  createdAt DateTime        @default(now())
+  orders    PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id         Int            @id @default(autoincrement())
+  number     String         @unique // PO-YYMM-####
+  supplierId Int
+  supplier   Supplier       @relation(fields: [supplierId], references: [id])
+  status     String         @default("draft") // draft|ordered|received
+  total      Float          @default(0)
+  note       String?
+  createdAt  DateTime       @default(now())
+  items      PurchaseItem[]
+}
+
+model PurchaseItem {
+  id          Int           @id @default(autoincrement())
+  poId        Int
+  po          PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  description String
+  qty         Float         @default(1)
+  unit        String?
+  unitPrice   Float         @default(0)
+  amount      Float         @default(0)
+}
+
+model InventoryItem {
+  id           Int         @id @default(autoincrement())
+  name         String
+  category     String? // paper|ink|chemical|packaging|other
+  unit         String      @default("ชิ้น")
+  qtyOnHand    Float       @default(0)
+  reorderPoint Float       @default(0)
+  createdAt    DateTime    @default(now())
+  moves        StockMove[]
+}
+
+model StockMove {
+  id        Int           @id @default(autoincrement())
+  itemId    Int
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  qty       Float // + รับเข้า / - เบิกออก
+  type      String // in|out|adjust
+  refType   String?
+  refId     Int?
+  note      String?
+  createdAt DateTime      @default(now())
+}
+
+model QuotationItem {
+  id            Int       @id @default(autoincrement())
+  quotationId   Int
+  quotation     Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  description   String
+  // ขนาดงานสำเร็จ (ซม.)
+  pieceW        Float
+  pieceH        Float
+  bleed         Float     @default(0.3)
+  quantity      Int
+  // ประเภทการวางเลย์เอ้าท์ (twoSide=2 หน้า, book=หนังสือหลายหน้า, set=งานเป็นชุด)
+  layoutCategory String   @default("twoSide")
+  pageCount     Int? // จำนวนหน้า (งานหนังสือ)
+  setsPerBook   Int? // จำนวนชุดต่อเล่ม (งานเป็นชุด เช่น ใบเสร็จ)
+  priceMode     String    @default("margin") // margin = บวก % กำไร, unit = ระบุราคาขาย/หน่วย
+  paperId       Int?
+  paper         Paper?    @relation(fields: [paperId], references: [id])
+  colorsFront   Int       @default(4)
+  colorsBack    Int       @default(0)
+  // เครื่องพิมพ์ที่เลือก
+  pressId       Int?
+  press         Press?    @relation(fields: [pressId], references: [id])
+  pressName     String?
+  cutsPerParent Int       @default(1) // แผ่นพิมพ์ต่อแผ่นใหญ่
+  pressSheets   Int       @default(0) // แผ่นพิมพ์ที่ต้องใช้
+  // ผลคำนวณ (เก็บเป็น snapshot)
+  upsPerSheet   Int       @default(0) // ชิ้นต่อแผ่นพิมพ์
+  sheetsNeeded  Int       @default(0) // แผ่นใหญ่ที่ต้องใช้
+  efficiency    Float     @default(0)
+  unitPrice     Float     @default(0)
+  amount        Float     @default(0)
+  meta          String? // JSON เก็บรายละเอียดการคำนวณ/layout
+}

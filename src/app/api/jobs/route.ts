@@ -1,0 +1,19 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/permissions";
+import { createJobFromQuotation } from "@/lib/jobs";
+
+export async function POST(req: Request) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || !can(user.role, "createQuotation")) {
+      return NextResponse.json({ error: "ไม่มีสิทธิ์" }, { status: 403 });
+    }
+    const { quotationId } = await req.json();
+    if (!quotationId) return NextResponse.json({ error: "ไม่มีใบเสนอราคา" }, { status: 400 });
+    const job = await createJobFromQuotation(Number(quotationId));
+    return NextResponse.json({ id: job.id, code: job.code });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "ผิดพลาด" }, { status: 500 });
+  }
+}

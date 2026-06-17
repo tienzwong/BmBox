@@ -1,0 +1,20 @@
+import { prisma } from "@/lib/prisma";
+import CustomerManager from "@/components/CustomerManager";
+import { requireUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/permissions";
+
+export const dynamic = "force-dynamic";
+
+export default async function CustomersPage() {
+  const user = await requireUser();
+  const customers = await prisma.customer.findMany({ orderBy: { name: "asc" } });
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-slate-800">ลูกค้า</h1>
+        <p className="text-sm text-slate-500">ฐานข้อมูลลูกค้าสำหรับออกใบเสนอราคา</p>
+      </div>
+      <CustomerManager customers={customers} canManage={can(user.role, "manageMasterData")} />
+    </div>
+  );
+}
