@@ -5,6 +5,11 @@ import JobProgressBar from "@/components/JobProgressBar";
 
 export const dynamic = "force-dynamic";
 
+// คำอธิบายสถานะ — ใช้ Unicode escape กันตัวอักษรเพี้ยน
+const LEGEND_DONE = "\u2713 \u0e40\u0e2a\u0e23\u0e47\u0e08\u0e2a\u0e34\u0e19\u0e41\u0e25\u0e49\u0e27";
+const LEGEND_ACTIVE = "\u27f3 \u0e01\u0e33\u0e25\u0e31\u0e07\u0e14\u0e33\u0e40\u0e19\u0e34\u0e19\u0e01\u0e32\u0e23";
+const LEGEND_PENDING = "\u25cb \u0e23\u0e2d\u0e14\u0e33\u0e40\u0e19\u0e34\u0e19\u0e01\u0e32\u0e23";
+
 export default async function ProgressDemoPage() {
   await requireUser();
 
@@ -14,7 +19,7 @@ export default async function ProgressDemoPage() {
         <Link href="/" className="text-sm text-brand-600 hover:underline">← หน้าหลัก</Link>
         <h1 className="mt-2 text-xl font-bold text-slate-800">ตัวอย่าง Progress Bar — สถานะงาน</h1>
         <p className="text-sm text-slate-500">
-          {"🎨 🖨️ ✂️ 🚚 ✅ · ✓ เสร็จสิ้นแล้ว · ⟳ กำลังดำเนินการ · ○ ยังไ่ธึง"}
+          {`🎨 🖨️ ✂️ 🚚 ✅ · ${LEGEND_DONE} · ${LEGEND_ACTIVE} · ${LEGEND_PENDING}`}
         </p>
       </div>
 
@@ -28,9 +33,9 @@ export default async function ProgressDemoPage() {
           <span>✅ เสร็จสิ้น</span>
         </div>
         <div className="mt-3 flex flex-wrap gap-4 text-xs">
-          <Legend dot="bg-emerald-500" label="✓ เสร็จสินแล้ว" />
-          <Legend dot="bg-brand-600" label="⟳ กำลังดำเนินการ" />
-          <Legend dot="bg-slate-100 ring-2 ring-slate-300" label="○ ยังไ่ธึง" />
+          <Legend dot="bg-emerald-500" label={LEGEND_DONE} />
+          <Legend dot="bg-brand-600" label={LEGEND_ACTIVE} />
+          <Legend dot="bg-slate-100 ring-2 ring-slate-300" label={LEGEND_PENDING} />
         </div>
       </div>
 
