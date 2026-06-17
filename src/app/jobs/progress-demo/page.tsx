@@ -14,7 +14,7 @@ export default async function ProgressDemoPage() {
         <Link href="/" className="text-sm text-brand-600 hover:underline">← หน้าหลัก</Link>
         <h1 className="mt-2 text-xl font-bold text-slate-800">ตัวอย่าง Progress Bar — สถานะงาน</h1>
         <p className="text-sm text-slate-500">
-          🎨 🖨️ ✂️ 🚚 ✅ · ✓ เสร็จ · ⟳ กำลังทำ · ○ รอ
+          {"🎨 🖨️ ✂️ 🚚 ✅ · ✓ เสร็จสิ้นแล้ว · ⟳ กำลังดำเนินการ · ○ ยังไ่ธึง"}
         </p>
       </div>
 
@@ -28,9 +28,9 @@ export default async function ProgressDemoPage() {
           <span>✅ เสร็จสิ้น</span>
         </div>
         <div className="mt-3 flex flex-wrap gap-4 text-xs">
-          <Legend dot="bg-emerald-500" label="✓ เสร็จแล้ว" />
-          <Legend dot="bg-brand-600" label="⟳ กำลังทำ" />
-          <Legend dot="bg-slate-100 ring-2 ring-slate-300" label="○ ยังไမဖึง" />
+          <Legend dot="bg-emerald-500" label="✓ เสร็จสินแล้ว" />
+          <Legend dot="bg-brand-600" label="⟳ กำลังดำเนินการ" />
+          <Legend dot="bg-slate-100 ring-2 ring-slate-300" label="○ ยังไ่ธึง" />
         </div>
       </div>
 
