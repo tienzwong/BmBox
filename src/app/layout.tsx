@@ -46,7 +46,7 @@ export default async function RootLayout({
           title: "ข้อมูลหลัก",
           links: [
             { href: "/papers", label: "คลังกระดาษ", icon: "▥", iconClass: "text-slate-400" },
-            { href: "/customers", label: "ลูกค้า", icon: "◍", iconClass: "text-slate-400" },
+            { href: "/contacts", label: "สมุดรายชื่อ", icon: "◍", iconClass: "text-slate-400" },
             ...(can(user.role, "viewCost")
               ? [{ href: "/costing/machines", label: "เครื่องจักร", icon: "⚙", iconClass: "text-slate-400" }]
               : []),

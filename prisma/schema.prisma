@@ -44,6 +44,7 @@ model Customer {
   createdAt  DateTime    @default(now())
   quotations Quotation[]
   jobs       Job[]
+  supplier   Supplier?   // ถ้าเป็นทั้งลูกค้าและผู้จำหน่าย
 }
 
 /// ชนิดกระดาษ + ขนาดแผ่นใหญ่ที่ซื้อเข้ามา (หน่วย: เซนติเมตร)
@@ -260,13 +261,17 @@ model CostEntry {
 // จัดซื้อ + คลังสินค้า (ค่อนข้างเป็นอิสระ)
 // ===========================================================================
 model Supplier {
-  id        Int             @id @default(autoincrement())
-  name      String
-  taxId     String?
-  phone     String?
-  contact   String?
-  createdAt DateTime        @default(now())
-  orders    PurchaseOrder[]
+  id         Int             @id @default(autoincrement())
+  name       String
+  taxId      String?
+  address    String?
+  phone      String?
+  email      String?
+  contact    String?
+  customerId Int?            @unique // เชื่อมกับลูกค้า (กรณีเป็นทั้งสองฝ่าย)
+  customer   Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt  DateTime        @default(now())
+  orders     PurchaseOrder[]
 }
 
 model PurchaseOrder {

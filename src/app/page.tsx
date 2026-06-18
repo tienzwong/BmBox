@@ -107,7 +107,7 @@ export default async function Dashboard() {
     { label: "ใบเสนอราคา", value: num(qCount), href: "/quotations" },
     ...(showPrice ? [{ label: "มูลค่ารวม", value: baht(sumAgg._sum.total ?? 0), href: "/quotations" }] : []),
     { label: "ชนิดกระดาษ", value: num(pCount), href: "/papers" },
-    { label: "ลูกค้า", value: num(cCount), href: "/customers" },
+    { label: "ลูกค้า", value: num(cCount), href: "/contacts?tab=customer" },
   ];
 
   return (
