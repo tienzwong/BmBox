@@ -58,8 +58,8 @@ export default function ExecutiveDashboard({
   ];
 
   return (
-    <div className="space-y-5">
-      {showPrice && salesChart}
+    <div className="flex flex-col gap-4 md:space-y-5 md:gap-0">
+      {showPrice && salesChart && <div className="order-first md:order-none">{salesChart}</div>}
 
       {/* KPI row — REF style white cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

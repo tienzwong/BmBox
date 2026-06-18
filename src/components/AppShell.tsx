@@ -6,15 +6,17 @@ import type { NavItem, NavLink } from "@/lib/nav";
 import { ChevronLeft, ChevronRight, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import UserMenu from "@/components/UserMenu";
 import NotificationBell from "@/components/NotificationBell";
+import { resolvePageTitle } from "@/lib/page-title";
 
 const STORAGE_KEY = "bmbox-sidebar-collapsed";
 const RAIL_W = "w-[3.75rem]";
 const ROW_H = "h-11";
 const NAV_ROW_MAX = 44;
-const NAV_ROW_MIN = 32;
+const HEADER_PX = 64; // h-16
+const FOOTER_PX = 88; // กระดิ่ง + แถวผู้ใช้ (h-11 × 2)
 const HEADER_H = "h-16";
 const LOGO_H = "h-[2.625rem]"; // +50% จาก h-7
 const SIDEBAR_EXPANDED = "15.75rem";
@@ -43,7 +45,7 @@ export default function AppShell({
   const masterBtnRef = useRef<HTMLButtonElement>(null);
   const userBtnRef = useRef<HTMLButtonElement>(null);
   const userFooterRef = useRef<HTMLButtonElement>(null);
-  const navSlotRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const [navRowPx, setNavRowPx] = useState(NAV_ROW_MAX);
 
   const masterDropdown = navItems.find((item) => item.type === "dropdown");
@@ -67,19 +69,23 @@ export default function AppShell({
     }
   }, []);
 
-  useEffect(() => {
-    const el = navSlotRef.current;
-    if (!el) return;
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
 
     const update = () => {
-      const h = el.getBoundingClientRect().height;
       const n = Math.max(navItems.length, 1);
-      setNavRowPx(Math.max(NAV_ROW_MIN, Math.min(NAV_ROW_MAX, Math.floor(h / n))));
+      // วัดจาก nav โดยตรง; fallback จาก viewport เมื่อยังไม่มี layout
+      let h = nav.clientHeight;
+      if (h < 1 && typeof window !== "undefined") {
+        h = Math.max(0, window.innerHeight - HEADER_PX - FOOTER_PX);
+      }
+      setNavRowPx(Math.min(NAV_ROW_MAX, h / n));
     };
 
     update();
     const ro = new ResizeObserver(update);
-    ro.observe(el);
+    ro.observe(nav);
     window.addEventListener("resize", update);
     return () => {
       ro.disconnect();
@@ -179,8 +185,17 @@ export default function AppShell({
   }
 
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
+  const mobileTitle = resolvePageTitle(pathname, navItems);
 
-  const navRowStyle = { height: navRowPx, minHeight: NAV_ROW_MIN };
+  const navRowStyle = {
+    height: navRowPx,
+    maxHeight: NAV_ROW_MAX,
+    flexShrink: 1,
+  };
+  const iconSize = navRowPx < 26 ? "h-3.5 w-3.5" : navRowPx < 34 ? "h-4 w-4" : "h-5 w-5";
+  const navGridStyle = {
+    gridTemplateRows: `repeat(${navItems.length}, ${navRowPx}px)`,
+  };
 
   function iconBtnClass(active: boolean) {
     return `flex w-full shrink-0 items-center justify-center transition ${
@@ -331,7 +346,7 @@ export default function AppShell({
           {/* แถบน้ำเงินเต็มความสูง */}
           <div className={`absolute inset-y-0 left-0 ${RAIL_W} bg-brand-800`} aria-hidden />
 
-          <div ref={navSlotRef} className="relative flex min-h-0 flex-1 overflow-hidden">
+          <div className="relative flex min-h-0 flex-1 overflow-hidden">
             <div className={`relative flex ${RAIL_W} shrink-0 flex-col text-white`}>
               <div
                 className={`flex ${HEADER_H} shrink-0 items-center justify-center border-b border-white/10 px-1`}
@@ -339,7 +354,11 @@ export default function AppShell({
                 <BmLogo className={`${LOGO_H} w-auto max-w-[3.25rem] text-white`} />
               </div>
 
-              <nav className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <nav
+                ref={navRef}
+                className="grid min-h-0 flex-1 overflow-hidden"
+                style={navGridStyle}
+              >
                 {navItems.map((item) => {
                   if (item.type === "link") {
                     const active = isActive(item.href);
@@ -351,7 +370,7 @@ export default function AppShell({
                         className={iconBtnClass(active)}
                         style={navRowStyle}
                       >
-                        <NavIcon name={item.icon} className="h-5 w-5" />
+                        <NavIcon name={item.icon} className={iconSize} />
                       </Link>
                     );
                   }
@@ -366,7 +385,7 @@ export default function AppShell({
                       className={iconBtnClass(masterChildActive || masterOpen)}
                       style={navRowStyle}
                     >
-                      <NavIcon name={item.icon} className="h-5 w-5" />
+                      <NavIcon name={item.icon} className={iconSize} />
                     </button>
                   );
                 })}
@@ -393,14 +412,14 @@ export default function AppShell({
                   </button>
                 </div>
 
-                <nav className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <nav className="grid min-h-0 flex-1 overflow-hidden" style={navGridStyle}>
                   {navItems.map((item) => {
                     if (item.type === "link") {
                       return (
                         <Link
                           key={item.href}
                           href={item.href}
-                          className={labelLinkClass(isActive(item.href))}
+                          className={`${labelLinkClass(isActive(item.href))} ${navRowPx < 34 ? "text-xs" : "text-sm"}`}
                           style={navRowStyle}
                         >
                           {item.label}
@@ -413,11 +432,11 @@ export default function AppShell({
                         key="master-data-label"
                         type="button"
                         onClick={toggleMasterFlyout}
-                        className={`${labelLinkClass(masterChildActive || masterOpen)} justify-between gap-2`}
+                        className={`${labelLinkClass(masterChildActive || masterOpen)} justify-between gap-2 ${navRowPx < 34 ? "text-xs" : "text-sm"}`}
                         style={navRowStyle}
                       >
                         <span className="truncate">{item.label}</span>
-                        <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                       </button>
                     );
                   })}
@@ -426,7 +445,7 @@ export default function AppShell({
             )}
           </div>
 
-          {/* Footer */}
+          {/* Footer — ความสูงคงที่ */}
           <div className="relative flex shrink-0">
             <div className={`relative ${RAIL_W} shrink-0`}>
               <NotificationBell tone="rail" panelLeft={sidebarWidth} />
@@ -434,17 +453,13 @@ export default function AppShell({
             {!collapsed && <div className={`${ROW_H} w-48 shrink-0 bg-white`} aria-hidden />}
           </div>
           <div className="relative flex shrink-0">
-            <div
-              className={`relative ${RAIL_W} shrink-0 ${
-                collapsed ? `flex ${ROW_H} items-center justify-center` : "flex items-start justify-center pt-0.5"
-              }`}
-            >
+            <div className={`relative ${RAIL_W} shrink-0 flex ${ROW_H} items-center justify-center`}>
               <button
                 ref={userBtnRef}
                 type="button"
                 title={userName}
                 onClick={toggleUserFlyoutFromIcon}
-                className="flex h-5 w-full items-center justify-center text-white transition hover:opacity-80"
+                className="flex h-full w-full items-center justify-center text-white transition hover:opacity-80"
                 aria-label="บัญชีผู้ใช้"
                 aria-expanded={userOpen}
               >
@@ -452,7 +467,7 @@ export default function AppShell({
               </button>
             </div>
             {!collapsed && (
-              <div className="w-48 shrink-0 bg-white">
+              <div className={`flex w-48 shrink-0 items-center bg-white ${ROW_H}`}>
                 <UserMenu
                   name={userName}
                   roleLabel={roleLabel}
@@ -460,6 +475,7 @@ export default function AppShell({
                   variant="sidebar-footer"
                   buttonRef={userFooterRef}
                   onOpenMenu={toggleUserFlyoutFromFooter}
+                  compact
                 />
               </div>
             )}
@@ -544,18 +560,26 @@ export default function AppShell({
           collapsed ? "md:ml-[3.75rem]" : "md:ml-[15.75rem]"
         }`}
       >
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          className="fixed left-4 top-4 z-30 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-white text-slate-600 shadow-sm hover:bg-slate-50 md:hidden"
-          aria-label="เปิดเมนู"
-          aria-expanded={mobileOpen}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-          </svg>
-        </button>
-        <main className="p-4 md:p-6">{children}</main>
+        <header className="sticky top-0 z-30 bg-brand-600 md:hidden">
+          <div className="grid h-14 grid-cols-[3rem_1fr_3rem] items-center px-2">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10"
+              aria-label="เปิดเมนู"
+              aria-expanded={mobileOpen}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
+              </svg>
+            </button>
+            <h1 className="truncate text-center text-base font-semibold text-white">{mobileTitle}</h1>
+            <div className="flex justify-end">
+              <NotificationBell tone="header" />
+            </div>
+          </div>
+        </header>
+        <main className="px-4 pb-4 pt-3 md:p-6">{children}</main>
       </div>
     </div>
   );

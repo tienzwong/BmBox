@@ -78,19 +78,21 @@ export default async function Dashboard() {
     });
 
     return (
-      <div className="space-y-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-slate-800">Dashboard ผู้บริหาร</h1>
-            <p className="text-sm text-slate-500">BmBox ERP — ภาพรวมงานและสถานะทุกแผนก</p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/quotations/new" className="btn-primary text-xs">
-              + สร้างใบเสนอราคา
-            </Link>
-            <Link href="/settings/architecture" className="btn-outline text-xs">
-              โครงสร้างระบบ
-            </Link>
+      <div className="flex flex-col gap-4 md:space-y-5 md:gap-0">
+        <div className="hidden md:block">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold text-slate-800">Dashboard ผู้บริหาร</h1>
+              <p className="text-sm text-slate-500">BmBox ERP — ภาพรวมงานและสถานะทุกแผนก</p>
+            </div>
+            <div className="flex gap-2">
+              <Link href="/quotations/new" className="btn-primary text-xs">
+                + สร้างใบเสนอราคา
+              </Link>
+              <Link href="/settings/architecture" className="btn-outline text-xs">
+                โครงสร้างระบบ
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -112,24 +114,24 @@ export default async function Dashboard() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="flex flex-col gap-4 md:space-y-6 md:gap-0">
+      <div className="hidden md:block">
         <h1 className="text-xl font-bold text-slate-800">ภาพรวม</h1>
         <p className="text-sm text-slate-500">BmBox ERP — เบลสโมทีฟ จำกัด</p>
       </div>
 
+      {showPrice && <div className="order-first md:order-none">{salesChart}</div>}
+
       <JobStatusBar stageCounts={stageCounts} estimatingCount={estimatingCount} holdCount={holdCount} />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         {stats.map((s) => (
-          <Link key={s.label} href={s.href} className="card p-5 transition hover:border-brand-300">
+          <Link key={s.label} href={s.href} className="card p-4 transition hover:border-brand-300 md:p-5">
             <div className="text-xs text-slate-400">{s.label}</div>
-            <div className="mt-1 text-2xl font-bold text-slate-800">{s.value}</div>
+            <div className="mt-1 text-xl font-bold text-slate-800 md:text-2xl">{s.value}</div>
           </Link>
         ))}
       </div>
-
-      {showPrice && salesChart}
 
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-line px-5 py-3">

@@ -10,6 +10,7 @@ type UserMenuProps = {
   variant?: "inline" | "sidebar-footer" | "sidebar-flyout";
   onOpenMenu?: () => void;
   buttonRef?: Ref<HTMLButtonElement>;
+  compact?: boolean;
 };
 
 export default function UserMenu({
@@ -19,6 +20,7 @@ export default function UserMenu({
   variant = "inline",
   onOpenMenu,
   buttonRef,
+  compact = false,
 }: UserMenuProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -36,12 +38,16 @@ export default function UserMenu({
         ref={buttonRef}
         type="button"
         onClick={onOpenMenu}
-        className="w-full px-4 pb-3 pt-0 text-left transition hover:opacity-80"
+        className={`w-full text-left transition hover:opacity-80 ${compact ? "truncate px-4 py-0" : "px-4 pb-3 pt-0"}`}
       >
-        <div className="truncate text-sm font-semibold text-slate-800">{name}</div>
-        <div className="truncate text-[11px] text-slate-400">
-          {department ? `${roleLabel} · ${department}` : roleLabel}
+        <div className={`truncate font-semibold text-slate-800 ${compact ? "text-xs leading-tight" : "text-sm"}`}>
+          {name}
         </div>
+        {!compact && (
+          <div className="truncate text-[11px] text-slate-400">
+            {department ? `${roleLabel} · ${department}` : roleLabel}
+          </div>
+        )}
       </button>
     );
   }
