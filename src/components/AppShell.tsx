@@ -2,61 +2,18 @@
 
 import { NavIcon } from "@/components/icons/nav-icons";
 import type { NavItem, NavLink } from "@/lib/nav";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import UserMenu from "@/components/UserMenu";
 import NotificationBell from "@/components/NotificationBell";
 
 const STORAGE_KEY = "bmbox-sidebar-collapsed";
 const RAIL_W = "w-[3.75rem]";
-
-function NavRow({
-  link,
-  collapsed,
-  active,
-  sub = false,
-  onNavigate,
-}: {
-  link: NavLink;
-  collapsed: boolean;
-  active: boolean;
-  sub?: boolean;
-  onNavigate?: () => void;
-}) {
-  return (
-    <Link
-      href={link.href}
-      onClick={onNavigate}
-      title={collapsed ? link.label : undefined}
-      className="group flex shrink-0"
-    >
-      <span
-        className={`flex ${RAIL_W} shrink-0 items-center justify-center py-2.5 transition ${
-          active
-            ? "bg-brand-700 text-white"
-            : "bg-brand-800 text-white/70 group-hover:bg-brand-700/80 group-hover:text-white"
-        }`}
-      >
-        <NavIcon name={link.icon} className="h-5 w-5" />
-      </span>
-      {!collapsed && (
-        <span
-          className={`flex min-w-0 flex-1 items-center truncate py-2.5 text-sm transition ${
-            sub ? "pl-6 pr-4" : "px-4"
-          } ${
-            active
-              ? "bg-brand-50 font-medium text-brand-700"
-              : "bg-white text-slate-600 group-hover:bg-slate-50 group-hover:text-brand-700"
-          }`}
-        >
-          {link.label}
-        </span>
-      )}
-    </Link>
-  );
-}
+const ROW_H = "h-11";
+const SIDEBAR_EXPANDED = "15.75rem";
+const SIDEBAR_COLLAPSED = "3.75rem";
 
 export default function AppShell({
   children,
@@ -75,15 +32,19 @@ export default function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [masterOpen, setMasterOpen] = useState(false);
+  const [flyoutTop, setFlyoutTop] = useState(0);
+  const masterBtnRef = useRef<HTMLButtonElement>(null);
 
   const masterDropdown = navItems.find((item) => item.type === "dropdown");
   const masterChildren = masterDropdown?.type === "dropdown" ? masterDropdown.children : [];
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
+  const closeMasterFlyout = useCallback(() => setMasterOpen(false), []);
 
   useEffect(() => {
     closeMobile();
-  }, [pathname, closeMobile]);
+    closeMasterFlyout();
+  }, [pathname, closeMobile, closeMasterFlyout]);
 
   useEffect(() => {
     try {
@@ -107,6 +68,15 @@ export default function AppShell({
     };
   }, [mobileOpen, closeMobile]);
 
+  useEffect(() => {
+    if (!masterOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeMasterFlyout();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [masterOpen, closeMasterFlyout]);
+
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -114,15 +84,12 @@ export default function AppShell({
 
   const masterChildActive = useMemo(
     () => masterChildren.some((l) => isActive(l.href)),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [pathname, masterChildren],
   );
 
-  useEffect(() => {
-    if (masterChildActive) setMasterOpen(true);
-  }, [masterChildActive]);
-
   function toggleCollapsed() {
+    closeMasterFlyout();
     setCollapsed((prev) => {
       const next = !prev;
       try {
@@ -132,6 +99,62 @@ export default function AppShell({
       }
       return next;
     });
+  }
+
+  function toggleMasterFlyout() {
+    if (masterOpen) {
+      closeMasterFlyout();
+      return;
+    }
+    if (masterBtnRef.current) {
+      setFlyoutTop(masterBtnRef.current.getBoundingClientRect().top);
+    }
+    setMasterOpen(true);
+  }
+
+  const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
+
+  function iconBtnClass(active: boolean) {
+    return `flex ${ROW_H} w-full shrink-0 items-center justify-center transition ${
+      active
+        ? "bg-brand-700 text-white"
+        : "text-white/70 hover:bg-brand-700/80 hover:text-white"
+    }`;
+  }
+
+  function labelLinkClass(active: boolean) {
+    return `flex ${ROW_H} w-full shrink-0 items-center truncate px-4 text-sm transition ${
+      active
+        ? "bg-brand-50 font-medium text-brand-700"
+        : "text-slate-600 hover:bg-slate-50 hover:text-brand-700"
+    }`;
+  }
+
+  function renderFlyoutRow(child: NavLink) {
+    const active = isActive(child.href);
+    return (
+      <Link
+        key={child.href}
+        href={child.href}
+        onClick={closeMasterFlyout}
+        className="group flex"
+      >
+        <span
+          className={`flex ${RAIL_W} shrink-0 items-center justify-center ${ROW_H} ${
+            active ? "bg-brand-700 text-white" : "bg-brand-800 text-white/70 group-hover:bg-brand-700/80 group-hover:text-white"
+          }`}
+        >
+          <NavIcon name={child.icon} className="h-5 w-5" />
+        </span>
+        <span
+          className={`flex w-44 shrink-0 items-center px-4 ${ROW_H} text-sm ${
+            active ? "bg-brand-50 font-medium text-brand-700" : "bg-white text-slate-600 group-hover:bg-slate-50"
+          }`}
+        >
+          {child.label}
+        </span>
+      </Link>
+    );
   }
 
   function renderMobileNav() {
@@ -171,11 +194,7 @@ export default function AppShell({
               <NavIcon name={item.icon} className="h-4 w-4" />
             </span>
             <span className="flex-1 text-left">{item.label}</span>
-            {masterOpen ? (
-              <ChevronUp className="h-4 w-4 text-slate-400" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-slate-400" />
-            )}
+            <ChevronRight className="h-4 w-4 text-slate-400" />
           </button>
           {masterOpen && (
             <div className="ml-4 space-y-1 border-l border-line pl-2">
@@ -203,71 +222,6 @@ export default function AppShell({
     });
   }
 
-  function renderDesktopNav() {
-    return navItems.map((item) => {
-      if (item.type === "link") {
-        return (
-          <NavRow
-            key={item.href}
-            link={item}
-            collapsed={collapsed}
-            active={isActive(item.href)}
-          />
-        );
-      }
-
-      const open = masterOpen;
-      const parentActive = masterChildActive;
-
-      return (
-        <div key="master-data">
-          <button
-            type="button"
-            onClick={() => setMasterOpen((o) => !o)}
-            title={collapsed ? item.label : undefined}
-            className="group flex w-full shrink-0 text-left"
-          >
-            <span
-              className={`flex ${RAIL_W} shrink-0 items-center justify-center py-2.5 transition ${
-                parentActive
-                  ? "bg-brand-700 text-white"
-                  : "bg-brand-800 text-white/70 group-hover:bg-brand-700/80 group-hover:text-white"
-              }`}
-            >
-              <NavIcon name={item.icon} className="h-5 w-5" />
-            </span>
-            {!collapsed && (
-              <span
-                className={`flex min-w-0 flex-1 items-center justify-between gap-2 truncate px-4 py-2.5 text-sm transition ${
-                  parentActive
-                    ? "bg-brand-50 font-medium text-brand-700"
-                    : "bg-white text-slate-600 group-hover:bg-slate-50 group-hover:text-brand-700"
-                }`}
-              >
-                <span className="truncate">{item.label}</span>
-                {open ? (
-                  <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
-                )}
-              </span>
-            )}
-          </button>
-          {open &&
-            item.children.map((child) => (
-              <NavRow
-                key={child.href}
-                link={child}
-                collapsed={collapsed}
-                active={isActive(child.href)}
-                sub
-              />
-            ))}
-        </div>
-      );
-    });
-  }
-
   const mobileSidebar = (
     <>
       <div className="flex items-center gap-3 border-b border-line px-5 py-5">
@@ -287,29 +241,69 @@ export default function AppShell({
           ✕
         </button>
       </div>
-
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">{renderMobileNav()}</nav>
     </>
   );
 
   return (
-    <div className="flex min-h-screen">
-      <div className="relative hidden shrink-0 md:flex">
+    <div className="min-h-screen">
+      {/* Desktop sidebar — fixed เต็มความสูง */}
+      <div
+        className="relative hidden md:block"
+        style={{ width: sidebarWidth, transition: "width 200ms ease-out" }}
+      >
         <aside
-          className={`flex flex-col border-r border-line transition-[width] duration-200 ease-out ${
-            collapsed ? RAIL_W : "w-[15.75rem]"
-          }`}
+          className="fixed inset-y-0 left-0 z-40 flex h-screen border-r border-line"
+          style={{ width: sidebarWidth, transition: "width 200ms ease-out" }}
         >
-          <div className="flex h-14 shrink-0 border-b border-line">
-            <div
-              className={`flex ${RAIL_W} shrink-0 items-center justify-center border-r border-white/10 bg-brand-800`}
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-sm font-bold text-white">
+          {/* แถบน้ำเงิน — เต็มความสูง */}
+          <div className={`flex ${RAIL_W} h-full shrink-0 flex-col bg-brand-800 text-white`}>
+            <div className="flex h-14 shrink-0 items-center justify-center border-b border-white/10">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-sm font-bold">
                 Bm
               </div>
             </div>
-            {!collapsed && (
-              <div className="flex min-w-0 flex-1 items-center justify-between bg-white px-4">
+
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              {navItems.map((item) => {
+                if (item.type === "link") {
+                  const active = isActive(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={collapsed ? item.label : undefined}
+                      className={iconBtnClass(active)}
+                    >
+                      <NavIcon name={item.icon} className="h-5 w-5" />
+                    </Link>
+                  );
+                }
+
+                return (
+                  <button
+                    key="master-data"
+                    ref={masterBtnRef}
+                    type="button"
+                    title={collapsed ? item.label : undefined}
+                    onClick={toggleMasterFlyout}
+                    className={iconBtnClass(masterChildActive || masterOpen)}
+                  >
+                    <NavIcon name={item.icon} className="h-5 w-5" />
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="shrink-0 border-t border-white/10 py-3 text-center text-[10px] text-white/40">
+              ERP
+            </div>
+          </div>
+
+          {/* แผงขาว — ข้อความเท่านั้น */}
+          {!collapsed && (
+            <div className="flex h-full w-48 shrink-0 flex-col bg-white">
+              <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-4">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-bold text-slate-800">BmBox ERP</div>
                   <div className="truncate text-[11px] text-slate-400">เบลสโมทีฟ จำกัด</div>
@@ -317,37 +311,51 @@ export default function AppShell({
                 <button
                   type="button"
                   onClick={toggleCollapsed}
-                  className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                   aria-label="ย่อเมนู"
                   title="ย่อเมนู"
                 >
                   <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
                 </button>
               </div>
-            )}
-          </div>
 
-          <nav className="flex flex-1 flex-col overflow-y-auto">{renderDesktopNav()}</nav>
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                {navItems.map((item) => {
+                  if (item.type === "link") {
+                    return (
+                      <Link key={item.href} href={item.href} className={labelLinkClass(isActive(item.href))}>
+                        {item.label}
+                      </Link>
+                    );
+                  }
 
-          <div className="flex shrink-0 border-t border-line">
-            <div
-              className={`${RAIL_W} shrink-0 border-r border-white/10 bg-brand-800 py-3 text-center text-[10px] text-white/40`}
-            >
-              ERP
-            </div>
-            {!collapsed && (
-              <div className="flex flex-1 items-center bg-white px-4 py-3 text-[11px] text-slate-400">
+                  return (
+                    <button
+                      key="master-data-label"
+                      type="button"
+                      onClick={toggleMasterFlyout}
+                      className={`${labelLinkClass(masterChildActive || masterOpen)} justify-between gap-2`}
+                    >
+                      <span className="truncate">{item.label}</span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="shrink-0 border-t border-line px-4 py-3 text-[11px] text-slate-400">
                 โรงพิมพ์แพคเกจจิ้งกระดาษ
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </aside>
 
         {collapsed && (
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="absolute top-[3.25rem] left-[3.35rem] z-10 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-brand-200 bg-white text-brand-600 shadow-md hover:bg-brand-50"
+            className="fixed top-[3.25rem] z-50 flex h-7 w-7 items-center justify-center rounded-full border border-brand-200 bg-white text-brand-600 shadow-md hover:bg-brand-50"
+            style={{ left: "calc(3.75rem - 0.875rem)" }}
             aria-label="ขยายเมนู"
             title="ขยายเมนู"
           >
@@ -355,6 +363,24 @@ export default function AppShell({
           </button>
         )}
       </div>
+
+      {/* Floating menu — ข้อมูลหลัก */}
+      {masterOpen && masterDropdown?.type === "dropdown" && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 hidden md:block"
+            onClick={closeMasterFlyout}
+            aria-label="ปิดเมนูข้อมูลหลัก"
+          />
+          <div
+            className="fixed z-50 hidden overflow-hidden rounded-lg border border-line bg-white shadow-xl md:block"
+            style={{ left: sidebarWidth, top: flyoutTop }}
+          >
+            {masterDropdown.children.map((child) => renderFlyoutRow(child))}
+          </div>
+        </>
+      )}
 
       {mobileOpen && (
         <button
@@ -373,7 +399,12 @@ export default function AppShell({
         {mobileSidebar}
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      {/* เนื้อหาหลัก — เว้นที่ sidebar */}
+      <div
+        className={`flex min-h-screen min-w-0 flex-col transition-[margin] duration-200 ease-out ${
+          collapsed ? "md:ml-[3.75rem]" : "md:ml-[15.75rem]"
+        }`}
+      >
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-white px-4 md:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
