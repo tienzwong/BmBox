@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Bell } from "lucide-react";
 
 interface NotifItem {
   id: number;
@@ -36,6 +37,8 @@ export default function NotificationBell({
   const [items, setItems] = useState<NotifItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [panelTop, setPanelTop] = useState(0);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -94,14 +97,22 @@ export default function NotificationBell({
 
   const isRail = tone === "rail";
 
+  function toggleOpen() {
+    if (!open && isRail && btnRef.current) {
+      setPanelTop(btnRef.current.getBoundingClientRect().top);
+    }
+    setOpen((o) => {
+      if (!o) void load();
+      return !o;
+    });
+  }
+
   return (
     <div className="relative" ref={panelRef}>
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => {
-          setOpen((o) => !o);
-          if (!open) void load();
-        }}
+        onClick={toggleOpen}
         className={
           isRail
             ? "relative flex h-11 w-full items-center justify-center text-white/70 transition hover:bg-brand-700/80 hover:text-white"
@@ -110,12 +121,15 @@ export default function NotificationBell({
         aria-label="การแจ้งเตือน"
         aria-expanded={open}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <Bell className="h-5 w-5" strokeWidth={2} aria-hidden />
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+          <span
+            className={
+              isRail
+                ? "absolute right-2.5 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white"
+                : "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white"
+            }
+          >
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -130,7 +144,7 @@ export default function NotificationBell({
           }
           style={
             isRail && panelLeft
-              ? { left: panelLeft, bottom: "3.5rem" }
+              ? { left: panelLeft, top: panelTop }
               : undefined
           }
         >

@@ -2,6 +2,36 @@ import type { SalesPoint } from "@/components/SalesChart";
 
 const THAI_MONTH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
+/** ยอดขายรายวัน — เดือนปัจจุบัน (ถึงวันนี้) */
+export function dailySalesCurrentMonth(rows: { issueDate: Date; total: number }[]): SalesPoint[] {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const lastDay = now.getDate();
+  const buckets: SalesPoint[] = [];
+
+  for (let day = 1; day <= lastDay; day++) {
+    buckets.push({ label: String(day), value: 0, count: 0 });
+  }
+
+  for (const r of rows) {
+    const d = new Date(r.issueDate);
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      const day = d.getDate();
+      if (day >= 1 && day <= lastDay) {
+        buckets[day - 1].value += r.total;
+        buckets[day - 1].count += 1;
+      }
+    }
+  }
+  return buckets;
+}
+
+export function currentMonthLabel(): string {
+  const now = new Date();
+  return `${THAI_MONTH[now.getMonth()]} ${String((now.getFullYear() + 543) % 100).padStart(2, "0")}`;
+}
+
 export function monthlySales(rows: { issueDate: Date; total: number }[], months = 6): SalesPoint[] {
   const now = new Date();
   const buckets: SalesPoint[] = [];

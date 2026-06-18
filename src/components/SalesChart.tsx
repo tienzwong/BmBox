@@ -28,7 +28,7 @@ export default function SalesChart({ data }: { data: SalesPoint[] }) {
 
   const slot = chartW / data.length;
   const barW = Math.min(data.length > 8 ? 36 : 56, slot * 0.55);
-  const labelSize = data.length > 8 ? 9 : 11;
+  const labelSize = data.length > 20 ? 8 : data.length > 8 ? 9 : 11;
 
   return (
     <div className="w-full">

@@ -5,7 +5,7 @@ import SalesChartPanel from "@/components/SalesChartPanel";
 import JobStatusBar from "@/components/JobStatusBar";
 import ExecutiveDashboard from "@/components/ExecutiveDashboard";
 import { buildExecutiveMetrics } from "@/lib/dashboard-executive";
-import { monthlySales } from "@/lib/sales-chart";
+import { dailySalesCurrentMonth, monthlySales } from "@/lib/sales-chart";
 import { requireUser } from "@/lib/auth/session";
 import { can, isRole } from "@/lib/auth/permissions";
 
@@ -63,10 +63,11 @@ export default async function Dashboard() {
   ]);
 
   const stageCounts = jobStageGroups.map((g) => ({ stage: g.stage, count: g._count.id }));
+  const chart1m = dailySalesCurrentMonth(allForChart);
   const chart6m = monthlySales(allForChart, 6);
   const chart1y = monthlySales(allForChart, 12);
 
-  const salesChart = <SalesChartPanel data6m={chart6m} data1y={chart1y} />;
+  const salesChart = <SalesChartPanel data1m={chart1m} data6m={chart6m} data1y={chart1y} />;
 
   if (isExecutive) {
     const metrics = buildExecutiveMetrics({
