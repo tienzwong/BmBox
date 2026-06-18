@@ -13,6 +13,7 @@ import { DEFAULT_RATES, type CostRates } from "@/lib/cost";
 import type { LayoutCategory } from "@/lib/imposition";
 import { baht, num } from "@/lib/format";
 import SheetView from "./SheetView";
+import PackagingImport, { type PackagingImportResult } from "./PackagingImport";
 
 export interface PaperOption extends PaperLike {}
 export interface CustomerOption {
@@ -114,9 +115,50 @@ export default function QuotationForm({
   const [items, setItems] = useState<Item[]>([newItem(defaultPaper)]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [packaging, setPackaging] = useState<{
+    imageDataUrl: string | null;
+    imageName: string | null;
+    dielineSvg: string | null;
+    dieline: PackagingImportResult["dieline"];
+  } | null>(null);
 
   function updateItem(id: string, patch: Partial<Item>) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  }
+
+  function handlePackagingImport(result: PackagingImportResult) {
+    if (result.title) setTitle(result.title);
+    if (result.jobType) setJobType(result.jobType);
+    if (result.specDetail) setSpecDetail(result.specDetail);
+    if (result.note) setNote((n) => n || result.note);
+    if (result.dieCutCost != null) setRates((r) => ({ ...r, dieCut: result.dieCutCost! }));
+    setPackaging({
+      imageDataUrl: result.imageDataUrl,
+      imageName: result.imageName,
+      dielineSvg: result.dielineSvg,
+      dieline: result.dieline,
+    });
+    if (result.items.length > 0) {
+      setItems(
+        result.items.map((pi, idx) => {
+          const base = idx === 0 ? items[0] ?? newItem(defaultPaper) : newItem(defaultPaper);
+          return {
+            ...base,
+            id: crypto.randomUUID(),
+            description: pi.description ?? base.description,
+            pieceW: pi.pieceW ?? base.pieceW,
+            pieceH: pi.pieceH ?? base.pieceH,
+            bleed: pi.bleed ?? base.bleed,
+            layoutCategory: pi.layoutCategory ?? base.layoutCategory,
+            pageCount: pi.pageCount ?? base.pageCount,
+            setsPerBook: pi.setsPerBook ?? base.setsPerBook,
+            colorsFront: pi.colorsFront ?? base.colorsFront,
+            colorsBack: pi.colorsBack ?? base.colorsBack,
+            expanded: true,
+          };
+        })
+      );
+    }
   }
   function addItem() {
     setItems((prev) => [...prev, newItem(defaultPaper)]);
@@ -260,6 +302,19 @@ export default function QuotationForm({
                 press: p.best?.press.name ?? null,
                 parentSheets: p.best?.layout.parentSheets ?? null,
               })),
+              ...(packaging && idx === 0
+                ? {
+                    packaging: {
+                      imageName: packaging.imageName,
+                      imageDataUrl:
+                        packaging.imageDataUrl && packaging.imageDataUrl.length <= 400_000
+                          ? packaging.imageDataUrl
+                          : undefined,
+                      dielineSvg: packaging.dielineSvg,
+                      dieline: packaging.dieline,
+                    },
+                  }
+                : {}),
             }),
           };
         }),
@@ -281,6 +336,34 @@ export default function QuotationForm({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6">
+        <PackagingImport onImport={handlePackagingImport} />
+
+        {packaging && (packaging.imageDataUrl || packaging.dielineSvg) && (
+          <section className="card p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-700">Final Packaging ที่นำเข้า</h2>
+              <button type="button" className="text-xs text-slate-400 hover:text-rose-600" onClick={() => setPackaging(null)}>
+                ลบ preview
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {packaging.imageDataUrl && (
+                <div>
+                  <div className="label">{packaging.imageName ?? "รูปสินค้า"}</div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={packaging.imageDataUrl} alt="" className="max-h-48 rounded border border-line object-contain" />
+                </div>
+              )}
+              {packaging.dielineSvg && (
+                <div>
+                  <div className="label">เส้นไดคัท</div>
+                  <div className="rounded border border-line bg-slate-50 p-2" dangerouslySetInnerHTML={{ __html: packaging.dielineSvg }} />
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         <section className="card p-5">
           <h2 className="mb-4 text-sm font-semibold text-slate-700">ข้อมูลงานประเมินราคา</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -327,7 +410,7 @@ export default function QuotationForm({
             </div>
             <div className="sm:col-span-2">
               <label className="label">รายละเอียด Spec ที่ลูกค้ากำหนด</label>
-              <input className="input" placeholder="เช่น พิมพ์ 4 สี เคลือบด้าน ปั๊มนูน" value={specDetail}
+              <textarea className="input min-h-[72px] resize-y" rows={3} placeholder="เช่น พิมพ์ 4 สี เคลือบด้าน ปั๊มนูน" value={specDetail}
                 onChange={(e) => setSpecDetail(e.target.value)} />
             </div>
             <div>

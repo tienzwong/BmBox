@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "title": "กล่องบรรจุภัณฑ์ ABC",
+  "jobType": "กล่องกระดาษลูกฟูก",
+  "spec": "กระดาษลูกฟูก E-flute 350gsm\nพิมพ์ 4 สี + เคลือบด้าน\nไดคัท + ปะกล่อง\nขนาดกล่องพับแล้ว 9 x 5.4 x 12 ซม.",
+  "note": "Import จาก Final Packaging — ตัวอย่าง",
+  "items": [
+    {
+      "description": "กล่อง ABC (แบน)",
+      "pieceW": 9,
+      "pieceH": 5.4,
+      "bleed": 0.3,
+      "layoutCategory": "twoSide",
+      "colorsFront": 4,
+      "colorsBack": 0
+    }
+  ],
+  "packaging": {
+    "imageName": "product-mockup.png",
+    "imageBase64": "",
+    "dieline": {
+      "perimeterCm": 86,
+      "knifeCount": 1,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 120\"><rect x=\"10\" y=\"10\" width=\"180\" height=\"100\" fill=\"none\" stroke=\"#2563eb\" stroke-width=\"2\" stroke-dasharray=\"4 2\"/><text x=\"100\" y=\"65\" text-anchor=\"middle\" font-size=\"12\" fill=\"#64748b\">Dieline preview</text></svg>"
+    }
+  }
+}

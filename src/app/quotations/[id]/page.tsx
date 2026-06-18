@@ -5,6 +5,7 @@ import { baht, num, thaiDate } from "@/lib/format";
 import PrintButton from "@/components/PrintButton";
 import QuotationActions from "@/components/QuotationActions";
 import CopyButton from "@/components/CopyButton";
+import PackagingPreview, { type PackagingMeta } from "@/components/PackagingPreview";
 import { requireUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/permissions";
 
@@ -68,6 +69,20 @@ export default async function QuotationDetail({
   });
   const fallbackQty: QtyMeta[] =
     qtyTotals.length > 0 ? qtyTotals : [{ qty: q.acceptedQty ?? q.items[0]?.quantity ?? 0, total: q.subtotal }];
+
+  let packagingMeta: PackagingMeta | null = null;
+  for (const it of q.items) {
+    if (!it.meta) continue;
+    try {
+      const m = JSON.parse(it.meta) as { packaging?: PackagingMeta };
+      if (m.packaging?.imageDataUrl || m.packaging?.dielineSvg) {
+        packagingMeta = m.packaging;
+        break;
+      }
+    } catch {
+      // ข้าม
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -134,11 +149,15 @@ export default async function QuotationDetail({
             {q.title && <div className="font-medium text-slate-700">{q.title}</div>}
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
               {q.jobType && <span>ลักษณะงาน: {q.jobType}</span>}
-              {q.specDetail && <span>Spec: {q.specDetail}</span>}
               {q.acceptedQty && <span>ยอดที่รับงาน: {num(q.acceptedQty)}</span>}
             </div>
+            {q.specDetail && (
+              <pre className="mt-2 whitespace-pre-wrap text-xs text-slate-600">{q.specDetail}</pre>
+            )}
           </div>
         )}
+
+        {packagingMeta && <PackagingPreview data={packagingMeta} />}
 
         {/* เปรียบเทียบยอดพิมพ์ */}
         {showPrice && qtyTotals.length > 1 && (
