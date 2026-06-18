@@ -1,6 +1,7 @@
 "use client";
 
 import { NavIcon, RAIL_ICON_NAMES, type NavIconName } from "@/components/icons/nav-icons";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -19,6 +20,9 @@ export interface NavSection {
   links: NavLink[];
 }
 
+const STORAGE_KEY = "bmbox-sidebar-collapsed";
+const RAIL_W = "w-[3.75rem]";
+
 export default function AppShell({
   children,
   sections,
@@ -34,6 +38,7 @@ export default function AppShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState(0);
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
@@ -41,6 +46,14 @@ export default function AppShell({
   useEffect(() => {
     closeMobile();
   }, [pathname, closeMobile]);
+
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -75,6 +88,18 @@ export default function AppShell({
 
   function selectSection(index: number) {
     setActiveSection(index);
+  }
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
   }
 
   const current = sections[activeSection] ?? sections[0];
@@ -135,80 +160,135 @@ export default function AppShell({
 
   return (
     <div className="flex min-h-screen">
-      {/* Desktop — two-tier sidebar (icon rail + sub-panel) */}
-      <div className="hidden shrink-0 md:flex">
-        {/* Icon rail */}
-        <aside className="flex w-[3.75rem] flex-col bg-brand-800 text-white">
-          <div className="flex h-14 items-center justify-center border-b border-white/10">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-sm font-bold">
-              Bm
+      {/* Desktop — icon บนแถบน้ำเงิน + ข้อความบนพื้นขาว */}
+      <div className="relative hidden shrink-0 md:flex">
+        <aside
+          className={`flex flex-col border-r border-line transition-[width] duration-200 ease-out ${
+            collapsed ? RAIL_W : "w-[15.75rem]"
+          }`}
+        >
+          {/* Header */}
+          <div className="flex h-14 shrink-0 border-b border-line">
+            <div
+              className={`flex ${RAIL_W} shrink-0 items-center justify-center border-r border-white/10 bg-brand-800`}
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-sm font-bold text-white">
+                Bm
+              </div>
             </div>
+            {!collapsed && (
+              <div className="flex min-w-0 flex-1 items-center justify-between bg-white px-4">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-bold text-slate-800">{panelTitle}</div>
+                  <div className="truncate text-[11px] text-slate-400">เบลสโมทีฟ จำกัด</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  aria-label="ย่อเมนู"
+                  title="ย่อเมนู"
+                >
+                  <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
+                </button>
+              </div>
+            )}
           </div>
 
-          <nav className="flex flex-1 flex-col items-center gap-1 py-3">
-            {sections.map((section, i) => {
-              const railName = RAIL_ICON_NAMES[i] ?? "layout-dashboard";
-              const sectionActive =
-                activeSection === i || section.links.some((l) => isActive(l.href));
+          {/* Section switchers */}
+          <div className="flex shrink-0 border-b border-white/10">
+            <div className={`flex ${RAIL_W} shrink-0 flex-col items-center gap-1 bg-brand-800 py-2`}>
+              {sections.map((section, i) => {
+                const railName = RAIL_ICON_NAMES[i] ?? "layout-dashboard";
+                const sectionActive =
+                  activeSection === i || section.links.some((l) => isActive(l.href));
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    title={section.title ?? section.links[0]?.label}
+                    onClick={() => selectSection(i)}
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+                      sectionActive
+                        ? "bg-white/20 text-white"
+                        : "text-white/60 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <NavIcon name={railName} className="h-4 w-4" />
+                  </button>
+                );
+              })}
+            </div>
+            {!collapsed && (
+              <div className="flex flex-1 items-center bg-white px-4 py-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  {panelTitle}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Nav links — icon น้ำเงิน | ข้อความขาว */}
+          <nav className="flex flex-1 flex-col overflow-y-auto">
+            {current?.links.map((link) => {
+              const active = isActive(link.href);
               return (
-                <button
-                  key={i}
-                  type="button"
-                  title={section.title ?? section.links[0]?.label}
-                  onClick={() => selectSection(i)}
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
-                    sectionActive
-                      ? "bg-white/20 text-white shadow-sm"
-                      : "text-white/70 hover:bg-white/10 hover:text-white"
-                  }`}
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  title={collapsed ? link.label : undefined}
+                  className="group flex shrink-0"
                 >
-                  <NavIcon name={railName} className="h-5 w-5" />
-                </button>
+                  <span
+                    className={`flex ${RAIL_W} shrink-0 items-center justify-center py-2.5 transition ${
+                      active
+                        ? "bg-brand-700 text-white"
+                        : "bg-brand-800 text-white/70 group-hover:bg-brand-700/80 group-hover:text-white"
+                    }`}
+                  >
+                    <NavIcon name={link.icon} className="h-5 w-5" />
+                  </span>
+                  {!collapsed && (
+                    <span
+                      className={`flex min-w-0 flex-1 items-center truncate px-4 py-2.5 text-sm transition ${
+                        active
+                          ? "bg-brand-50 font-medium text-brand-700"
+                          : "bg-white text-slate-600 group-hover:bg-slate-50 group-hover:text-brand-700"
+                      }`}
+                    >
+                      {link.label}
+                    </span>
+                  )}
+                </Link>
               );
             })}
           </nav>
 
-          <div className="border-t border-white/10 py-3 text-center text-[10px] text-white/40">
-            ERP
-          </div>
-        </aside>
-
-        {/* Sub-panel */}
-        <aside className="relative flex w-60 flex-col border-r border-line bg-white">
-          <div className="border-b border-line px-5 py-4">
-            <div className="text-base font-bold text-slate-800">{panelTitle}</div>
-            <div className="text-[11px] text-slate-400">เบลสโมทีฟ จำกัด</div>
-          </div>
-
-          <nav className="flex-1 overflow-y-auto p-3">
-            <div className="space-y-1">
-              {current?.links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                    isActive(link.href)
-                      ? "bg-brand-50 font-medium text-brand-700"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-brand-700"
-                  }`}
-                >
-                  <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
-                      isActive(link.href) ? "bg-brand-100 text-brand-700" : "bg-slate-100 text-slate-500"
-                    } ${link.iconClass ?? ""}`}
-                  >
-                    <NavIcon name={link.icon} className="h-4 w-4" />
-                  </span>
-                  <span className="truncate">{link.label}</span>
-                </Link>
-              ))}
+          {/* Footer */}
+          <div className="flex shrink-0 border-t border-line">
+            <div className={`${RAIL_W} shrink-0 border-r border-white/10 bg-brand-800 py-3 text-center text-[10px] text-white/40`}>
+              ERP
             </div>
-          </nav>
-
-          <div className="border-t border-line p-4 text-[11px] text-slate-400">
-            โรงพิมพ์แพคเกจจิ้งกระดาษ
+            {!collapsed && (
+              <div className="flex flex-1 items-center bg-white px-4 py-3 text-[11px] text-slate-400">
+                โรงพิมพ์แพคเกจจิ้งกระดาษ
+              </div>
+            )}
           </div>
         </aside>
+
+        {/* ปุ่มขยายเมื่อย่อแล้ว */}
+        {collapsed && (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="absolute top-[3.25rem] left-[3.35rem] z-10 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-brand-200 bg-white text-brand-600 shadow-md hover:bg-brand-50"
+            aria-label="ขยายเมนู"
+            title="ขยายเมนู"
+          >
+            <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        )}
       </div>
 
       {/* Mobile drawer */}
