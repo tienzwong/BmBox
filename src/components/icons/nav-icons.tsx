@@ -53,6 +53,3 @@ export function NavIcon({
   const Icon = NAV_ICON_MAP[name] ?? LayoutDashboard;
   return <Icon className={className} strokeWidth={2} aria-hidden />;
 }
-
-/** ไอคอน rail ซ้าย — ตามลำดับ section */
-export const RAIL_ICON_NAMES: NavIconName[] = ["layout-dashboard", "workflow", "database"];

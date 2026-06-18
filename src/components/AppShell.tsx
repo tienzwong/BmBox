@@ -1,37 +1,72 @@
 "use client";
 
-import { NavIcon, RAIL_ICON_NAMES, type NavIconName } from "@/components/icons/nav-icons";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { NavIcon } from "@/components/icons/nav-icons";
+import type { NavItem, NavLink } from "@/lib/nav";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import UserMenu from "@/components/UserMenu";
 import NotificationBell from "@/components/NotificationBell";
 
-export interface NavLink {
-  href: string;
-  label: string;
-  icon: NavIconName;
-  iconClass?: string;
-}
-
-export interface NavSection {
-  title?: string;
-  links: NavLink[];
-}
-
 const STORAGE_KEY = "bmbox-sidebar-collapsed";
 const RAIL_W = "w-[3.75rem]";
 
+function NavRow({
+  link,
+  collapsed,
+  active,
+  sub = false,
+  onNavigate,
+}: {
+  link: NavLink;
+  collapsed: boolean;
+  active: boolean;
+  sub?: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <Link
+      href={link.href}
+      onClick={onNavigate}
+      title={collapsed ? link.label : undefined}
+      className="group flex shrink-0"
+    >
+      <span
+        className={`flex ${RAIL_W} shrink-0 items-center justify-center py-2.5 transition ${
+          active
+            ? "bg-brand-700 text-white"
+            : "bg-brand-800 text-white/70 group-hover:bg-brand-700/80 group-hover:text-white"
+        }`}
+      >
+        <NavIcon name={link.icon} className="h-5 w-5" />
+      </span>
+      {!collapsed && (
+        <span
+          className={`flex min-w-0 flex-1 items-center truncate py-2.5 text-sm transition ${
+            sub ? "pl-6 pr-4" : "px-4"
+          } ${
+            active
+              ? "bg-brand-50 font-medium text-brand-700"
+              : "bg-white text-slate-600 group-hover:bg-slate-50 group-hover:text-brand-700"
+          }`}
+        >
+          {link.label}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export default function AppShell({
   children,
-  sections,
+  navItems,
   userName,
   roleLabel,
   department,
 }: {
   children: React.ReactNode;
-  sections: NavSection[];
+  navItems: NavItem[];
   userName: string;
   roleLabel: string;
   department: string | null;
@@ -39,7 +74,10 @@ export default function AppShell({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState(0);
+  const [masterOpen, setMasterOpen] = useState(false);
+
+  const masterDropdown = navItems.find((item) => item.type === "dropdown");
+  const masterChildren = masterDropdown?.type === "dropdown" ? masterDropdown.children : [];
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
@@ -74,21 +112,15 @@ export default function AppShell({
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
-  const sectionFromPath = useMemo(() => {
-    for (let i = sections.length - 1; i >= 0; i--) {
-      if (sections[i].links.some((l) => isActive(l.href))) return i;
-    }
-    return 0;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, sections]);
+  const masterChildActive = useMemo(
+    () => masterChildren.some((l) => isActive(l.href)),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pathname, masterChildren],
+  );
 
   useEffect(() => {
-    setActiveSection(sectionFromPath);
-  }, [sectionFromPath]);
-
-  function selectSection(index: number) {
-    setActiveSection(index);
-  }
+    if (masterChildActive) setMasterOpen(true);
+  }, [masterChildActive]);
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -102,8 +134,139 @@ export default function AppShell({
     });
   }
 
-  const current = sections[activeSection] ?? sections[0];
-  const panelTitle = current?.title ?? current?.links[0]?.label ?? "เมนู";
+  function renderMobileNav() {
+    return navItems.map((item) => {
+      if (item.type === "link") {
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={closeMobile}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+              isActive(item.href)
+                ? "bg-brand-50 font-medium text-brand-700"
+                : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+            }`}
+          >
+            <span className={`flex w-5 shrink-0 justify-center ${item.iconClass ?? "text-brand-500"}`}>
+              <NavIcon name={item.icon} className="h-4 w-4" />
+            </span>
+            {item.label}
+          </Link>
+        );
+      }
+
+      return (
+        <div key="master-data">
+          <button
+            type="button"
+            onClick={() => setMasterOpen((o) => !o)}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+              masterChildActive
+                ? "bg-brand-50 font-medium text-brand-700"
+                : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+            }`}
+          >
+            <span className="flex w-5 shrink-0 justify-center text-slate-400">
+              <NavIcon name={item.icon} className="h-4 w-4" />
+            </span>
+            <span className="flex-1 text-left">{item.label}</span>
+            {masterOpen ? (
+              <ChevronUp className="h-4 w-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-400" />
+            )}
+          </button>
+          {masterOpen && (
+            <div className="ml-4 space-y-1 border-l border-line pl-2">
+              {item.children.map((child) => (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  onClick={closeMobile}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    isActive(child.href)
+                      ? "bg-brand-50 font-medium text-brand-700"
+                      : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+                  }`}
+                >
+                  <span className={`flex w-5 shrink-0 justify-center ${child.iconClass ?? "text-slate-400"}`}>
+                    <NavIcon name={child.icon} className="h-4 w-4" />
+                  </span>
+                  {child.label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    });
+  }
+
+  function renderDesktopNav() {
+    return navItems.map((item) => {
+      if (item.type === "link") {
+        return (
+          <NavRow
+            key={item.href}
+            link={item}
+            collapsed={collapsed}
+            active={isActive(item.href)}
+          />
+        );
+      }
+
+      const open = masterOpen;
+      const parentActive = masterChildActive;
+
+      return (
+        <div key="master-data">
+          <button
+            type="button"
+            onClick={() => setMasterOpen((o) => !o)}
+            title={collapsed ? item.label : undefined}
+            className="group flex w-full shrink-0 text-left"
+          >
+            <span
+              className={`flex ${RAIL_W} shrink-0 items-center justify-center py-2.5 transition ${
+                parentActive
+                  ? "bg-brand-700 text-white"
+                  : "bg-brand-800 text-white/70 group-hover:bg-brand-700/80 group-hover:text-white"
+              }`}
+            >
+              <NavIcon name={item.icon} className="h-5 w-5" />
+            </span>
+            {!collapsed && (
+              <span
+                className={`flex min-w-0 flex-1 items-center justify-between gap-2 truncate px-4 py-2.5 text-sm transition ${
+                  parentActive
+                    ? "bg-brand-50 font-medium text-brand-700"
+                    : "bg-white text-slate-600 group-hover:bg-slate-50 group-hover:text-brand-700"
+                }`}
+              >
+                <span className="truncate">{item.label}</span>
+                {open ? (
+                  <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                )}
+              </span>
+            )}
+          </button>
+          {open &&
+            item.children.map((child) => (
+              <NavRow
+                key={child.href}
+                link={child}
+                collapsed={collapsed}
+                active={isActive(child.href)}
+                sub
+              />
+            ))}
+        </div>
+      );
+    });
+  }
 
   const mobileSidebar = (
     <>
@@ -125,49 +288,18 @@ export default function AppShell({
         </button>
       </div>
 
-      <nav className="flex-1 space-y-4 overflow-y-auto p-3">
-        {sections.map((section, i) => (
-          <div key={i}>
-            {section.title && (
-              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                {section.title}
-              </div>
-            )}
-            <div className="space-y-1">
-              {section.links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={closeMobile}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                    isActive(link.href)
-                      ? "bg-brand-50 font-medium text-brand-700"
-                      : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
-                  }`}
-                >
-                  <span className={`flex w-5 shrink-0 justify-center ${link.iconClass ?? "text-brand-500"}`}>
-                    <NavIcon name={link.icon} className="h-4 w-4" />
-                  </span>
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </nav>
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">{renderMobileNav()}</nav>
     </>
   );
 
   return (
     <div className="flex min-h-screen">
-      {/* Desktop — icon บนแถบน้ำเงิน + ข้อความบนพื้นขาว */}
       <div className="relative hidden shrink-0 md:flex">
         <aside
           className={`flex flex-col border-r border-line transition-[width] duration-200 ease-out ${
             collapsed ? RAIL_W : "w-[15.75rem]"
           }`}
         >
-          {/* Header */}
           <div className="flex h-14 shrink-0 border-b border-line">
             <div
               className={`flex ${RAIL_W} shrink-0 items-center justify-center border-r border-white/10 bg-brand-800`}
@@ -179,7 +311,7 @@ export default function AppShell({
             {!collapsed && (
               <div className="flex min-w-0 flex-1 items-center justify-between bg-white px-4">
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-bold text-slate-800">{panelTitle}</div>
+                  <div className="truncate text-sm font-bold text-slate-800">BmBox ERP</div>
                   <div className="truncate text-[11px] text-slate-400">เบลสโมทีฟ จำกัด</div>
                 </div>
                 <button
@@ -195,78 +327,12 @@ export default function AppShell({
             )}
           </div>
 
-          {/* Section switchers */}
-          <div className="flex shrink-0 border-b border-white/10">
-            <div className={`flex ${RAIL_W} shrink-0 flex-col items-center gap-1 bg-brand-800 py-2`}>
-              {sections.map((section, i) => {
-                const railName = RAIL_ICON_NAMES[i] ?? "layout-dashboard";
-                const sectionActive =
-                  activeSection === i || section.links.some((l) => isActive(l.href));
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    title={section.title ?? section.links[0]?.label}
-                    onClick={() => selectSection(i)}
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-                      sectionActive
-                        ? "bg-white/20 text-white"
-                        : "text-white/60 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <NavIcon name={railName} className="h-4 w-4" />
-                  </button>
-                );
-              })}
-            </div>
-            {!collapsed && (
-              <div className="flex flex-1 items-center bg-white px-4 py-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                  {panelTitle}
-                </span>
-              </div>
-            )}
-          </div>
+          <nav className="flex flex-1 flex-col overflow-y-auto">{renderDesktopNav()}</nav>
 
-          {/* Nav links — icon น้ำเงิน | ข้อความขาว */}
-          <nav className="flex flex-1 flex-col overflow-y-auto">
-            {current?.links.map((link) => {
-              const active = isActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  title={collapsed ? link.label : undefined}
-                  className="group flex shrink-0"
-                >
-                  <span
-                    className={`flex ${RAIL_W} shrink-0 items-center justify-center py-2.5 transition ${
-                      active
-                        ? "bg-brand-700 text-white"
-                        : "bg-brand-800 text-white/70 group-hover:bg-brand-700/80 group-hover:text-white"
-                    }`}
-                  >
-                    <NavIcon name={link.icon} className="h-5 w-5" />
-                  </span>
-                  {!collapsed && (
-                    <span
-                      className={`flex min-w-0 flex-1 items-center truncate px-4 py-2.5 text-sm transition ${
-                        active
-                          ? "bg-brand-50 font-medium text-brand-700"
-                          : "bg-white text-slate-600 group-hover:bg-slate-50 group-hover:text-brand-700"
-                      }`}
-                    >
-                      {link.label}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Footer */}
           <div className="flex shrink-0 border-t border-line">
-            <div className={`${RAIL_W} shrink-0 border-r border-white/10 bg-brand-800 py-3 text-center text-[10px] text-white/40`}>
+            <div
+              className={`${RAIL_W} shrink-0 border-r border-white/10 bg-brand-800 py-3 text-center text-[10px] text-white/40`}
+            >
               ERP
             </div>
             {!collapsed && (
@@ -277,7 +343,6 @@ export default function AppShell({
           </div>
         </aside>
 
-        {/* ปุ่มขยายเมื่อย่อแล้ว */}
         {collapsed && (
           <button
             type="button"
@@ -291,7 +356,6 @@ export default function AppShell({
         )}
       </div>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <button
           type="button"
