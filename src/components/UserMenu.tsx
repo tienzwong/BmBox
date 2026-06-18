@@ -28,7 +28,7 @@ export default function UserMenu({
 
   if (variant === "sidebar-footer" || variant === "sidebar-flyout") {
     return (
-      <div className={variant === "sidebar-flyout" ? "w-56 bg-white p-4" : "px-4 pb-4 pt-2"}>
+      <div className={variant === "sidebar-flyout" ? "w-56 bg-white p-4" : "px-4 pb-0 pt-0"}>
         <div className="truncate text-sm font-semibold text-slate-800">{name}</div>
         <div className="truncate text-[11px] text-slate-400">
           {department ? `${roleLabel} · ${department}` : roleLabel}

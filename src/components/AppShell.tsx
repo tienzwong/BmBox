@@ -287,110 +287,125 @@ export default function AppShell({
         style={{ width: sidebarWidth, transition: "width 200ms ease-out" }}
       >
         <aside
-          className="fixed inset-y-0 left-0 z-40 flex h-screen"
+          className="fixed inset-y-0 left-0 z-40 flex h-screen flex-col"
           style={{ width: sidebarWidth, transition: "width 200ms ease-out" }}
         >
-          {/* แถบน้ำเงิน — คอลัมน์เดียวตลอดความสูง */}
-          <div className={`flex ${RAIL_W} shrink-0 flex-col bg-brand-800 text-white`}>
-            <div
-              className={`flex ${HEADER_H} shrink-0 items-center justify-center border-b border-white/10 px-1`}
-            >
-              <BmLogo className={`${LOGO_H} w-auto max-w-[3.25rem] text-white`} />
-            </div>
-
-            <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-              {navItems.map((item) => {
-                if (item.type === "link") {
-                  const active = isActive(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      title={collapsed ? item.label : undefined}
-                      className={iconBtnClass(active)}
-                    >
-                      <NavIcon name={item.icon} className="h-5 w-5" />
-                    </Link>
-                  );
-                }
-
-                return (
-                  <button
-                    key="master-data"
-                    ref={masterBtnRef}
-                    type="button"
-                    title={collapsed ? item.label : undefined}
-                    onClick={toggleMasterFlyout}
-                    className={iconBtnClass(masterChildActive || masterOpen)}
-                  >
-                    <NavIcon name={item.icon} className="h-5 w-5" />
-                  </button>
-                );
-              })}
-            </nav>
-
-            <div className="shrink-0 border-t border-white/10">
-              <NotificationBell tone="rail" panelLeft={sidebarWidth} />
-              <button
-                ref={userBtnRef}
-                type="button"
-                title={collapsed ? userName : undefined}
-                onClick={collapsed ? toggleUserFlyout : undefined}
-                className={`flex ${ROW_H} w-full items-center justify-center text-white transition hover:bg-brand-700/80`}
-                aria-label="บัญชีผู้ใช้"
-              >
-                <User className="h-5 w-5" strokeWidth={2} />
-              </button>
-            </div>
-          </div>
-
-          {/* แผงขาว — ข้อความ + บัญชีผู้ใช้ */}
-          {!collapsed && (
-            <div className="flex w-48 shrink-0 flex-col border-r border-line bg-white">
+          {/* เนื้อหา sidebar */}
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <div className={`flex ${RAIL_W} shrink-0 flex-col bg-brand-800 text-white`}>
               <div
-                className={`flex ${HEADER_H} shrink-0 items-center justify-between border-b border-line px-4`}
+                className={`flex ${HEADER_H} shrink-0 items-center justify-center border-b border-white/10 px-1`}
               >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-bold text-slate-800">BmBox ERP</div>
-                  <div className="truncate text-[11px] text-slate-400">เบลสโมทีฟ จำกัด</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={toggleCollapsed}
-                  className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                  aria-label="ย่อเมนู"
-                  title="ย่อเมนู"
-                >
-                  <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
-                </button>
+                <BmLogo className={`${LOGO_H} w-auto max-w-[3.25rem] text-white`} />
               </div>
 
               <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto">
                 {navItems.map((item) => {
                   if (item.type === "link") {
+                    const active = isActive(item.href);
                     return (
-                      <Link key={item.href} href={item.href} className={labelLinkClass(isActive(item.href))}>
-                        {item.label}
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        title={collapsed ? item.label : undefined}
+                        className={iconBtnClass(active)}
+                      >
+                        <NavIcon name={item.icon} className="h-5 w-5" />
                       </Link>
                     );
                   }
 
                   return (
                     <button
-                      key="master-data-label"
+                      key="master-data"
+                      ref={masterBtnRef}
                       type="button"
+                      title={collapsed ? item.label : undefined}
                       onClick={toggleMasterFlyout}
-                      className={`${labelLinkClass(masterChildActive || masterOpen)} justify-between gap-2`}
+                      className={iconBtnClass(masterChildActive || masterOpen)}
                     >
-                      <span className="truncate">{item.label}</span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+                      <NavIcon name={item.icon} className="h-5 w-5" />
                     </button>
                   );
                 })}
               </nav>
+            </div>
 
-              <div className="shrink-0 border-t border-line bg-white">
-                <div className={`${ROW_H} shrink-0`} aria-hidden />
+            {!collapsed && (
+              <div className="flex w-48 shrink-0 flex-col border-r border-line bg-white">
+                <div
+                  className={`flex ${HEADER_H} shrink-0 items-center justify-between border-b border-line px-4`}
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-bold text-slate-800">BmBox ERP</div>
+                    <div className="truncate text-[11px] text-slate-400">เบลสโมทีฟ จำกัด</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleCollapsed}
+                    className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="ย่อเมนู"
+                    title="ย่อเมนู"
+                  >
+                    <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
+                  </button>
+                </div>
+
+                <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                  {navItems.map((item) => {
+                    if (item.type === "link") {
+                      return (
+                        <Link key={item.href} href={item.href} className={labelLinkClass(isActive(item.href))}>
+                          {item.label}
+                        </Link>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key="master-data-label"
+                        type="button"
+                        onClick={toggleMasterFlyout}
+                        className={`${labelLinkClass(masterChildActive || masterOpen)} justify-between gap-2`}
+                      >
+                        <span className="truncate">{item.label}</span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+            )}
+          </div>
+
+          {/* Footer — กระดิ่งเหนือ icon คน, ชื่อผู้ใช้ตรงแถว icon */}
+          <div className="flex shrink-0">
+            <div className={`${RAIL_W} shrink-0 bg-brand-800`}>
+              <NotificationBell tone="rail" panelLeft={sidebarWidth} />
+            </div>
+            {!collapsed && <div className={`${ROW_H} w-48 shrink-0 bg-white`} aria-hidden />}
+          </div>
+          <div className="flex shrink-0 pb-3">
+            <div
+              className={`${RAIL_W} shrink-0 bg-brand-800 ${
+                collapsed
+                  ? `flex ${ROW_H} items-center justify-center`
+                  : "flex items-start justify-center pt-0.5"
+              }`}
+            >
+              <button
+                ref={userBtnRef}
+                type="button"
+                title={collapsed ? userName : undefined}
+                onClick={collapsed ? toggleUserFlyout : undefined}
+                className="flex h-5 w-full items-center justify-center text-white transition hover:opacity-80"
+                aria-label="บัญชีผู้ใช้"
+              >
+                <User className="h-5 w-5" strokeWidth={2} />
+              </button>
+            </div>
+            {!collapsed && (
+              <div className="w-48 shrink-0 bg-white">
                 <UserMenu
                   name={userName}
                   roleLabel={roleLabel}
@@ -398,8 +413,8 @@ export default function AppShell({
                   variant="sidebar-footer"
                 />
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </aside>
 
         {collapsed && (
