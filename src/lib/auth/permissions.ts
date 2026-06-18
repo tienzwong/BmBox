@@ -97,7 +97,7 @@ const ROLES: Record<Role, RoleConfig> = {
   costing: {
     label: "บัญชีต้นทุน",
     modules: ["costing", "quotation"],
-    caps: ["viewCost", "viewPrice"],
+    caps: ["viewCost", "viewPrice", "manageMasterData"],
   },
   shipping: {
     label: "ฝ่ายจัดส่ง",

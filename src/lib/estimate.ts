@@ -11,6 +11,7 @@ import {
   type PressSpec,
 } from "@/lib/imposition";
 import { calcCost, type CostBreakdown, type CostRates } from "@/lib/cost";
+import { depreciationForPlates, depreciationForPressSheets } from "@/lib/machine-depreciation";
 
 export interface PaperLike {
   id: number;
@@ -24,6 +25,17 @@ export interface PaperLike {
 
 export interface PressLike extends PressSpec {
   id: number;
+  depreciationPer1000?: number;
+}
+
+export interface MachineLike {
+  id: number;
+  name: string;
+  unitLabel?: string | null;
+  department: string;
+  category: string;
+  depreciationPer1000: number;
+  depreciationPerPlate?: number;
 }
 
 export interface EstimateParams {
@@ -42,6 +54,8 @@ export interface EstimateParams {
   rates: CostRates;
   priceMode?: "margin" | "unit";
   unitPrice?: number;
+  prepressMachines?: MachineLike[];
+  postpressMachines?: MachineLike[];
 }
 
 export interface PlanResult {
@@ -87,6 +101,18 @@ export function evaluatePlan(
   if (!layout.fits) return null;
 
   const pricePerSheet = paperPricePerSheet(paper);
+  const pressDepreciation = depreciationForPressSheets(
+    layout.pressSheets,
+    press.depreciationPer1000 ?? 0
+  );
+  const postpressDepreciation = (params.postpressMachines ?? []).reduce(
+    (sum, m) => sum + depreciationForPressSheets(layout.pressSheets, m.depreciationPer1000),
+    0
+  );
+  const prepressDepreciation = (params.prepressMachines ?? []).reduce(
+    (sum, m) => sum + depreciationForPlates(layout.plateCount, m.depreciationPerPlate ?? 0),
+    0
+  );
   const cost = calcCost({
     parentSheets: layout.parentSheets,
     pressSheets: layout.pressSheets,
@@ -96,6 +122,7 @@ export function evaluatePlan(
     platePerColor: press.platePerColor,
     printPer1000: press.printPer1000,
     rates: params.rates,
+    depreciationCost: pressDepreciation + postpressDepreciation + prepressDepreciation,
     priceMode: params.priceMode,
     unitPrice: params.unitPrice,
     quantity,

@@ -31,6 +31,9 @@ export default async function CostingPage() {
       <div>
         <h1 className="text-xl font-bold text-slate-800">บัญชีต้นทุน</h1>
         <p className="text-sm text-slate-500">เปรียบเทียบต้นทุนประมาณการกับต้นทุนจริงของแต่ละงาน</p>
+        <Link href="/costing/machines" className="mt-2 inline-block text-sm text-brand-600 hover:underline">
+          เครื่องจักร & ค่าเสื่อมราคา →
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

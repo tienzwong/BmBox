@@ -72,6 +72,31 @@ model Press {
   active        Boolean @default(true)
   createdAt     DateTime @default(now())
   items         QuotationItem[]
+  machine       Machine?
+}
+
+/// เครื่องจักรโรงพิมพ์ — ต้นทุนค่าเสื่อมราคา (พรีเพลส + พิมพ์ + หลังพิมพ์)
+model Machine {
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  department           String   // prepress | printing | postpress
+  category             String   // plate_maker | offset_cut2 | offset_cut4 | paper_cutter | die_cut | gluing
+  unitLabel            String?  // เช่น เครื่องที่ 1 (กรณีมีหลายเครื่องประเภทเดียวกัน)
+  pressId              Int?     @unique
+  press                Press?   @relation(fields: [pressId], references: [id])
+  purchasePrice        Float    @default(0) // ราคาทุนเครื่อง (บาท)
+  salvageValue         Float    @default(0) // มูลค่าซาก
+  usefulLifeYears      Int      @default(10)
+  workingHoursPerYear  Int      @default(2000)
+  hoursPer1000Sheets   Float    @default(0) // ชั่วโมงทำงานต่อ 1,000 แผ่น (พิมพ์/หลังพิมพ์)
+  hoursPerPlate        Float    @default(0) // ชั่วโมงทำงานต่อ 1 กรอบเพลท (พรีเพลส/CTP)
+  depreciationPerHour  Float    @default(0)
+  depreciationPerMonth Float    @default(0)
+  depreciationPer1000  Float    @default(0) // ค่าเสื่อมต่อ 1,000 แผ่น
+  depreciationPerPlate Float    @default(0) // ค่าเสื่อมต่อ 1 กรอบเพลท
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model Quotation {

@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.mjs",
+    "db:seed-machines": "node scripts/seed-machines.mjs",
     "db:backup": "node scripts/backup.mjs",
     "set-password": "node scripts/set-password.mjs",
     "deploy": "bash scripts/deploy.sh",

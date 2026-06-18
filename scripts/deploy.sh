@@ -14,6 +14,9 @@ echo "==> sync schema เข้า DB (ไม่ลบข้อมูล)"
 npx prisma generate
 npm run db:push
 
+echo "==> seed เครื่องจักร (ถ้ายังไม่มี)"
+npm run db:seed-machines 2>/dev/null || true
+
 echo "==> build production"
 npm run build
 

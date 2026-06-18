@@ -56,6 +56,7 @@ export const COST_CATEGORY: Record<string, string> = {
   plate: "ค่าเพลท",
   ink: "ค่าหมึก",
   labor: "ค่าแรง",
+  depreciation: "ค่าเสื่อมเครื่องจักร",
   outsource: "จ้างนอก",
   other: "อื่น ๆ",
 };

@@ -37,6 +37,7 @@ export interface CostBreakdown {
   printCost: number;
   coatingCost: number;
   dieCutCost: number;
+  depreciationCost: number;
   baseCost: number;
   margin: number;
   total: number;
@@ -52,17 +53,18 @@ export function calcCost({
   platePerColor,
   printPer1000,
   rates,
+  depreciationCost = 0,
   priceMode = "margin",
   unitPrice,
   quantity = 0,
-}: CostInput): CostBreakdown {
+}: CostInput & { depreciationCost?: number }): CostBreakdown {
   const paperCost = parentSheets * pricePerParentSheet;
   const plateCost = plateCount * platePerColor;
   // ค่าพิมพ์คิดตามแผ่นพิมพ์ที่ป้อนเข้าเครื่อง × จำนวนสีรวม
   const printCost = (pressSheets / 1000) * totalColors * printPer1000;
   const coatingCost = pressSheets * rates.coatingPerSheet;
   const dieCutCost = rates.dieCut;
-  const baseCost = paperCost + plateCost + printCost + coatingCost + dieCutCost;
+  const baseCost = paperCost + plateCost + printCost + coatingCost + dieCutCost + depreciationCost;
 
   let total: number;
   let margin: number;
@@ -84,6 +86,7 @@ export function calcCost({
     printCost,
     coatingCost,
     dieCutCost,
+    depreciationCost,
     baseCost,
     margin,
     total,

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   rankPlans,
   type EstimateParams,
+  type MachineLike,
   type PaperLike,
   type PlanResult,
   type PressLike,
@@ -12,6 +13,7 @@ import {
 import { DEFAULT_RATES, type CostRates } from "@/lib/cost";
 import type { LayoutCategory } from "@/lib/imposition";
 import { baht, num } from "@/lib/format";
+import { machineDisplayName } from "@/lib/machine-depreciation";
 import SheetView from "./SheetView";
 import PackagingImport, { type PackagingImportResult } from "./PackagingImport";
 
@@ -21,6 +23,16 @@ export interface CustomerOption {
   name: string;
 }
 export interface PressOption extends PressLike {}
+
+export interface MachineOption {
+  id: number;
+  name: string;
+  unitLabel: string | null;
+  department: string;
+  category: string;
+  depreciationPer1000: number;
+  depreciationPerPlate: number;
+}
 
 const CATEGORIES: { value: LayoutCategory; label: string; hint: string }[] = [
   { value: "twoSide", label: "งาน 2 หน้า", hint: "ใบปลิว/แผ่นพับ/สติกเกอร์/กล่อง" },
@@ -47,6 +59,8 @@ interface Item {
   makeReady: number;
   priceMode: "margin" | "unit";
   unitPrice: number;
+  postpressMachineIds: number[];
+  prepressMachineIds: number[];
   expanded: boolean;
 }
 
@@ -56,7 +70,7 @@ interface ItemComputed {
   best: PlanResult | null; // ดีที่สุดของยอดที่กำลังแสดง
 }
 
-function newItem(paperId: number | null): Item {
+function newItem(paperId: number | null, defaultPrepressIds: number[] = []): Item {
   return {
     id: crypto.randomUUID(),
     description: "",
@@ -76,6 +90,8 @@ function newItem(paperId: number | null): Item {
     makeReady: 50,
     priceMode: "margin",
     unitPrice: 0,
+    postpressMachineIds: [],
+    prepressMachineIds: defaultPrepressIds,
     expanded: true,
   };
 }
@@ -84,15 +100,20 @@ export default function QuotationForm({
   papers,
   customers,
   presses,
+  postpressMachines = [],
+  prepressMachines = [],
   canViewCost = true,
 }: {
   papers: PaperOption[];
   customers: CustomerOption[];
   presses: PressOption[];
+  postpressMachines?: MachineOption[];
+  prepressMachines?: MachineOption[];
   canViewCost?: boolean;
 }) {
   const router = useRouter();
   const defaultPaper = papers[0]?.id ?? null;
+  const defaultPrepressIds = prepressMachines.length === 1 ? [prepressMachines[0].id] : [];
 
   // ส่วนหัวงานประเมิน
   const [customerId, setCustomerId] = useState<number | "new">(customers[0]?.id ?? "new");
@@ -112,7 +133,7 @@ export default function QuotationForm({
 
   const [rates, setRates] = useState<CostRates>({ ...DEFAULT_RATES });
   const [showRates, setShowRates] = useState(false);
-  const [items, setItems] = useState<Item[]>([newItem(defaultPaper)]);
+  const [items, setItems] = useState<Item[]>(() => [newItem(defaultPaper, defaultPrepressIds)]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [packaging, setPackaging] = useState<{
@@ -161,7 +182,7 @@ export default function QuotationForm({
     }
   }
   function addItem() {
-    setItems((prev) => [...prev, newItem(defaultPaper)]);
+    setItems((prev) => [...prev, newItem(defaultPaper, defaultPrepressIds)]);
   }
   function removeItem(id: string) {
     setItems((prev) => prev.filter((it) => it.id !== id));
@@ -190,23 +211,79 @@ export default function QuotationForm({
   // ยอดที่ใช้แสดง/บันทึก ต้องอยู่ในรายการ quantities
   const shownQty = quantities.includes(primaryQty) ? primaryQty : quantities[0];
 
-  const paramsFor = (it: Item): EstimateParams => ({
-    category: it.layoutCategory,
-    pieceW: it.pieceW,
-    pieceH: it.pieceH,
-    bleed: it.bleed,
-    gap: it.gap,
-    edge: it.edge,
-    colorsFront: it.colorsFront,
-    colorsBack: it.colorsBack,
-    pageCount: it.pageCount,
-    setsPerBook: it.setsPerBook,
-    spoilagePct: it.spoilagePct,
-    makeReady: it.makeReady,
-    rates,
-    priceMode: it.priceMode,
-    unitPrice: it.priceMode === "unit" ? it.unitPrice : undefined,
-  });
+  function togglePrepressMachine(itemId: string, machineId: number) {
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id !== itemId) return it;
+        const has = it.prepressMachineIds.includes(machineId);
+        return {
+          ...it,
+          prepressMachineIds: has
+            ? it.prepressMachineIds.filter((id) => id !== machineId)
+            : [...it.prepressMachineIds, machineId],
+        };
+      })
+    );
+  }
+
+  function togglePostpressMachine(itemId: string, machineId: number) {
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id !== itemId) return it;
+        const has = it.postpressMachineIds.includes(machineId);
+        return {
+          ...it,
+          postpressMachineIds: has
+            ? it.postpressMachineIds.filter((id) => id !== machineId)
+            : [...it.postpressMachineIds, machineId],
+        };
+      })
+    );
+  }
+
+  const paramsFor = (it: Item): EstimateParams => {
+    const selectedPrepress: MachineLike[] = prepressMachines
+      .filter((m) => it.prepressMachineIds.includes(m.id))
+      .map((m) => ({
+        id: m.id,
+        name: m.name,
+        unitLabel: m.unitLabel,
+        department: m.department,
+        category: m.category,
+        depreciationPer1000: m.depreciationPer1000,
+        depreciationPerPlate: m.depreciationPerPlate,
+      }));
+    const selectedPostpress: MachineLike[] = postpressMachines
+      .filter((m) => it.postpressMachineIds.includes(m.id))
+      .map((m) => ({
+        id: m.id,
+        name: m.name,
+        unitLabel: m.unitLabel,
+        department: m.department,
+        category: m.category,
+        depreciationPer1000: m.depreciationPer1000,
+        depreciationPerPlate: m.depreciationPerPlate,
+      }));
+    return {
+      category: it.layoutCategory,
+      pieceW: it.pieceW,
+      pieceH: it.pieceH,
+      bleed: it.bleed,
+      gap: it.gap,
+      edge: it.edge,
+      colorsFront: it.colorsFront,
+      colorsBack: it.colorsBack,
+      pageCount: it.pageCount,
+      setsPerBook: it.setsPerBook,
+      spoilagePct: it.spoilagePct,
+      makeReady: it.makeReady,
+      rates,
+      priceMode: it.priceMode,
+      unitPrice: it.priceMode === "unit" ? it.unitPrice : undefined,
+      prepressMachines: selectedPrepress,
+      postpressMachines: selectedPostpress,
+    };
+  };
 
   const computed = useMemo<ItemComputed[]>(() => {
     return items.map((it) => {
@@ -293,6 +370,8 @@ export default function QuotationForm({
               plateCount: best?.layout.plateCount,
               netPress: best?.layout.netPress,
               spoilage: best?.layout.spoilage,
+              postpressMachineIds: it.postpressMachineIds,
+              prepressMachineIds: it.prepressMachineIds,
               cost: best?.cost,
               perQty: c.perQty.map((p) => ({
                 qty: p.qty,
@@ -619,6 +698,66 @@ export default function QuotationForm({
                       </div>
                     )}
 
+                    {canViewCost && prepressMachines.length > 0 && (
+                      <div>
+                        <label className="label">เครื่องพรีเพลส — ยิงเพลท (คิดค่าเสื่อม)</label>
+                        <p className="mb-2 text-[11px] text-slate-400">
+                          ค่าเสื่อมคิดจากจำนวนกรอบเพลท × อัตราต่อเพลท
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {prepressMachines.map((m) => {
+                            const on = it.prepressMachineIds.includes(m.id);
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => togglePrepressMachine(it.id, m.id)}
+                                className={`rounded-lg border px-2.5 py-1 text-xs ${
+                                  on
+                                    ? "border-violet-500 bg-violet-50 text-violet-700"
+                                    : "border-line bg-white text-slate-500 hover:bg-slate-50"
+                                }`}
+                              >
+                                {on ? "✓ " : ""}
+                                {machineDisplayName(m.name, m.unitLabel)}
+                                <span className="ml-1 text-slate-400">({baht(m.depreciationPerPlate)}/เพลท)</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {canViewCost && postpressMachines.length > 0 && (
+                      <div>
+                        <label className="label">เครื่องหลังพิมพ์ (คิดค่าเสื่อม)</label>
+                        <p className="mb-2 text-[11px] text-slate-400">
+                          เลือกเครื่องที่ใช้งาน — ค่าเสื่อมคิดจากจำนวนแผ่นพิมพ์ × อัตราต่อ 1,000 แผ่น
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {postpressMachines.map((m) => {
+                            const on = it.postpressMachineIds.includes(m.id);
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => togglePostpressMachine(it.id, m.id)}
+                                className={`rounded-lg border px-2.5 py-1 text-xs ${
+                                  on
+                                    ? "border-brand-500 bg-brand-50 text-brand-700"
+                                    : "border-line bg-white text-slate-500 hover:bg-slate-50"
+                                }`}
+                              >
+                                {on ? "✓ " : ""}
+                                {machineDisplayName(m.name, m.unitLabel)}
+                                <span className="ml-1 text-slate-400">({baht(m.depreciationPer1000)}/1k)</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     <details className="rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm">
                       <summary className="cursor-pointer text-xs font-medium text-slate-500">ตั้งค่าการตัด/เผื่อเสีย (ขั้นสูง)</summary>
                       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -670,6 +809,9 @@ export default function QuotationForm({
                               <span>ค่ากระดาษ {baht(best.cost.paperCost)}</span>
                               <span>ค่าเพลท {baht(best.cost.plateCost)} ({num(best.layout.plateCount)} กรอบ)</span>
                               <span>ค่าพิมพ์ {baht(best.cost.printCost)}</span>
+                              {best.cost.depreciationCost > 0 && (
+                                <span>ค่าเสื่อมเครื่อง {baht(best.cost.depreciationCost)}</span>
+                              )}
                               <span>กำไร {baht(best.cost.margin)}</span>
                             </div>
                           )}
