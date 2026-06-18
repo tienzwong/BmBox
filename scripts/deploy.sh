@@ -12,7 +12,7 @@ npm ci
 
 echo "==> sync schema เข้า DB (ไม่ลบข้อมูล)"
 npx prisma generate
-npm run db:push
+npx prisma db push --accept-data-loss
 
 echo "==> seed เครื่องจักร (ถ้ายังไม่มี)"
 npm run db:seed-machines 2>/dev/null || true
