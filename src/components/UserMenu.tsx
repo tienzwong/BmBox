@@ -28,7 +28,7 @@ export default function UserMenu({
 
   if (variant === "sidebar-footer" || variant === "sidebar-flyout") {
     return (
-      <div className={variant === "sidebar-flyout" ? "w-56 bg-white p-4" : "px-4 py-3"}>
+      <div className={variant === "sidebar-flyout" ? "w-56 bg-white p-4" : "px-4 pb-4 pt-2"}>
         <div className="truncate text-sm font-semibold text-slate-800">{name}</div>
         <div className="truncate text-[11px] text-slate-400">
           {department ? `${roleLabel} · ${department}` : roleLabel}
@@ -37,7 +37,7 @@ export default function UserMenu({
           type="button"
           onClick={logout}
           disabled={loading}
-          className="mt-2.5 w-full rounded-full border border-line bg-white px-3 py-1.5 text-xs text-slate-600 transition hover:bg-slate-50"
+          className="mt-3 w-full rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
         >
           {loading ? "…" : "ออกจากระบบ"}
         </button>

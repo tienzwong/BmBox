@@ -115,7 +115,7 @@ export default function NotificationBell({
         onClick={toggleOpen}
         className={
           isRail
-            ? "relative flex h-11 w-full items-center justify-center text-white/70 transition hover:bg-brand-700/80 hover:text-white"
+            ? "relative flex h-11 w-full items-center justify-center text-white transition hover:bg-brand-700/80 hover:text-white"
             : "relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-white text-slate-600 hover:bg-slate-50"
         }
         aria-label="การแจ้งเตือน"
