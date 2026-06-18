@@ -16,6 +16,7 @@ export interface ModuleDef {
   description: string;
 }
 
+// แก้ไขโค้ดในโฟลเดอร์โมดูลหนึ่งได้อิสระ — ดู docs/ARCHITECTURE.md + graphify (/settings/architecture)
 export const MODULES: ModuleDef[] = [
   { key: "quotation", name: "ใบเสนอราคา", short: "ใบเสนอราคา", path: "/quotations", icon: "▤", accent: "text-brand-600", order: 1, description: "เสนอราคา + คำนวณกระดาษ/แผ่นพิมพ์" },
   { key: "prepress", name: "พรีเพลส", short: "พรีเพลส", path: "/prepress", icon: "✎", accent: "text-violet-600", order: 2, description: "ออกแบบ และทำแม่พิมพ์ (เพลท)" },

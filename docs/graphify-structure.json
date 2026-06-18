@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "description": "BmBox ERP conceptual graph — merged into graphify-out/graph.json by scripts/sync-graphify.mjs",
+  "nodes": [
+    { "id": "arch_module_registry", "label": "Module Registry", "file_type": "document", "source_file": "docs/ARCHITECTURE.md", "source_location": "Module Registry" },
+    { "id": "arch_job_lifecycle", "label": "Job Lifecycle", "file_type": "document", "source_file": "docs/ARCHITECTURE.md", "source_location": "Job Lifecycle" },
+    { "id": "arch_jobevent", "label": "JobEvent Timeline", "file_type": "document", "source_file": "src/lib/job-events.ts" },
+    { "id": "arch_notification", "label": "Notification System", "file_type": "document", "source_file": "src/app/api/notifications/route.ts" },
+    { "id": "arch_graphify", "label": "graphify Knowledge Graph", "file_type": "document", "source_file": "docs/ARCHITECTURE.md", "source_location": "graphify" },
+    { "id": "arch_packaging_import", "label": "Final Packaging Import", "file_type": "document", "source_file": "src/lib/packaging-import.ts" }
+  ],
+  "edges": [
+    { "source": "arch_module_registry", "target": "arch_job_lifecycle", "relation": "orchestrates", "confidence": "EXTRACTED", "source_file": "docs/ARCHITECTURE.md", "weight": 1 },
+    { "source": "arch_job_lifecycle", "target": "arch_jobevent", "relation": "emits_events_to", "confidence": "EXTRACTED", "source_file": "docs/ARCHITECTURE.md", "weight": 1 },
+    { "source": "arch_jobevent", "target": "arch_notification", "relation": "fans_out_to", "confidence": "EXTRACTED", "source_file": "src/lib/job-events.ts", "weight": 1 },
+    { "source": "arch_graphify", "target": "arch_module_registry", "relation": "documents", "confidence": "EXTRACTED", "source_file": "docs/ARCHITECTURE.md", "weight": 1 },
+    { "source": "arch_module_registry", "target": "arch_packaging_import", "relation": "includes_module", "confidence": "EXTRACTED", "source_file": "docs/ARCHITECTURE.md", "weight": 0.8 }
+  ]
+}

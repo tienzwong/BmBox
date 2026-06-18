@@ -12,6 +12,7 @@
     "db:backup": "node scripts/backup.mjs",
     "set-password": "node scripts/set-password.mjs",
     "deploy": "bash scripts/deploy.sh",
+    "graphify:sync": "node scripts/sync-graphify.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

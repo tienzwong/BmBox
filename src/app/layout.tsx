@@ -53,6 +53,9 @@ export default async function RootLayout({
                   { href: "/settings/backup", label: "สำรองข้อมูล", icon: "⛁", iconClass: "text-slate-400" },
                 ]
               : []),
+            ...(can(user.role, "manageMasterData") || can(user.role, "manageUsers")
+              ? [{ href: "/settings/architecture", label: "โครงสร้างระบบ", icon: "◈", iconClass: "text-slate-400" }]
+              : []),
           ],
         },
       ]

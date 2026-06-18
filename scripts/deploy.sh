@@ -17,6 +17,9 @@ npm run db:push
 echo "==> build production"
 npm run build
 
+echo "==> sync graphify → public/architecture (ถ้ามี)"
+npm run graphify:sync 2>/dev/null || true
+
 echo "==> สำรองฐานข้อมูลก่อนสลับเวอร์ชัน"
 npm run db:backup || true
 
