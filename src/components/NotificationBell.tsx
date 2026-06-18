@@ -24,7 +24,13 @@ function relTime(iso: string): string {
   return d.toLocaleDateString("th-TH", { day: "numeric", month: "short" });
 }
 
-export default function NotificationBell() {
+export default function NotificationBell({
+  tone = "default",
+  panelLeft,
+}: {
+  tone?: "default" | "rail";
+  panelLeft?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotifItem[]>([]);
@@ -86,6 +92,8 @@ export default function NotificationBell() {
     if (n.href) router.push(n.href);
   }
 
+  const isRail = tone === "rail";
+
   return (
     <div className="relative" ref={panelRef}>
       <button
@@ -94,7 +102,11 @@ export default function NotificationBell() {
           setOpen((o) => !o);
           if (!open) void load();
         }}
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-white text-slate-600 hover:bg-slate-50"
+        className={
+          isRail
+            ? "relative flex h-11 w-full items-center justify-center text-white/70 transition hover:bg-brand-700/80 hover:text-white"
+            : "relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-white text-slate-600 hover:bg-slate-50"
+        }
         aria-label="การแจ้งเตือน"
         aria-expanded={open}
       >
@@ -110,7 +122,18 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-white shadow-lg">
+        <div
+          className={
+            isRail
+              ? "fixed z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-white shadow-lg"
+              : "absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-white shadow-lg"
+          }
+          style={
+            isRail && panelLeft
+              ? { left: panelLeft, bottom: "3.5rem" }
+              : undefined
+          }
+        >
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <span className="text-sm font-semibold text-slate-800">การแจ้งเตือน</span>
             {unread > 0 && (

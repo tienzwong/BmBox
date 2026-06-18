@@ -2,7 +2,7 @@
 
 import { NavIcon } from "@/components/icons/nav-icons";
 import type { NavItem, NavLink } from "@/lib/nav";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -32,19 +32,24 @@ export default function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [masterOpen, setMasterOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
   const [flyoutTop, setFlyoutTop] = useState(0);
+  const [userFlyoutTop, setUserFlyoutTop] = useState(0);
   const masterBtnRef = useRef<HTMLButtonElement>(null);
+  const userBtnRef = useRef<HTMLButtonElement>(null);
 
   const masterDropdown = navItems.find((item) => item.type === "dropdown");
   const masterChildren = masterDropdown?.type === "dropdown" ? masterDropdown.children : [];
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
   const closeMasterFlyout = useCallback(() => setMasterOpen(false), []);
+  const closeUserFlyout = useCallback(() => setUserOpen(false), []);
 
   useEffect(() => {
     closeMobile();
     closeMasterFlyout();
-  }, [pathname, closeMobile, closeMasterFlyout]);
+    closeUserFlyout();
+  }, [pathname, closeMobile, closeMasterFlyout, closeUserFlyout]);
 
   useEffect(() => {
     try {
@@ -77,6 +82,15 @@ export default function AppShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [masterOpen, closeMasterFlyout]);
 
+  useEffect(() => {
+    if (!userOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeUserFlyout();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [userOpen, closeUserFlyout]);
+
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -90,6 +104,7 @@ export default function AppShell({
 
   function toggleCollapsed() {
     closeMasterFlyout();
+    closeUserFlyout();
     setCollapsed((prev) => {
       const next = !prev;
       try {
@@ -106,10 +121,24 @@ export default function AppShell({
       closeMasterFlyout();
       return;
     }
+    closeUserFlyout();
     if (masterBtnRef.current) {
       setFlyoutTop(masterBtnRef.current.getBoundingClientRect().top);
     }
     setMasterOpen(true);
+  }
+
+  function toggleUserFlyout() {
+    if (!collapsed) return;
+    if (userOpen) {
+      closeUserFlyout();
+      return;
+    }
+    closeMasterFlyout();
+    if (userBtnRef.current) {
+      setUserFlyoutTop(userBtnRef.current.getBoundingClientRect().top);
+    }
+    setUserOpen(true);
   }
 
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
@@ -242,6 +271,10 @@ export default function AppShell({
         </button>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">{renderMobileNav()}</nav>
+      <div className="shrink-0 border-t border-line p-3">
+        <NotificationBell />
+      </div>
+      <UserMenu name={userName} roleLabel={roleLabel} department={department} variant="sidebar-footer" />
     </>
   );
 
@@ -295,8 +328,22 @@ export default function AppShell({
               })}
             </div>
 
-            <div className="shrink-0 border-t border-white/10 py-3 text-center text-[10px] text-white/40">
-              ERP
+            <div className="shrink-0 border-t border-white/10">
+              <NotificationBell tone="rail" panelLeft={sidebarWidth} />
+              <button
+                ref={userBtnRef}
+                type="button"
+                title={collapsed ? userName : undefined}
+                onClick={toggleUserFlyout}
+                className={`flex ${ROW_H} w-full items-center justify-center transition ${
+                  userOpen
+                    ? "bg-brand-700 text-white"
+                    : "text-white/70 hover:bg-brand-700/80 hover:text-white"
+                }`}
+                aria-label="บัญชีผู้ใช้"
+              >
+                <User className="h-5 w-5" strokeWidth={2} />
+              </button>
             </div>
           </div>
 
@@ -343,9 +390,12 @@ export default function AppShell({
                 })}
               </div>
 
-              <div className="shrink-0 border-t border-line px-4 py-3 text-[11px] text-slate-400">
-                โรงพิมพ์แพคเกจจิ้งกระดาษ
-              </div>
+              <UserMenu
+                name={userName}
+                roleLabel={roleLabel}
+                department={department}
+                variant="sidebar-footer"
+              />
             </div>
           )}
         </aside>
@@ -382,6 +432,29 @@ export default function AppShell({
         </>
       )}
 
+      {/* Floating menu — บัญชีผู้ใช้ (เมื่อย่อ sidebar) */}
+      {userOpen && collapsed && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 hidden md:block"
+            onClick={closeUserFlyout}
+            aria-label="ปิดเมนูผู้ใช้"
+          />
+          <div
+            className="fixed z-50 hidden overflow-hidden rounded-lg border border-line bg-white shadow-xl md:block"
+            style={{ left: sidebarWidth, top: userFlyoutTop }}
+          >
+            <UserMenu
+              name={userName}
+              roleLabel={roleLabel}
+              department={department}
+              variant="sidebar-flyout"
+            />
+          </div>
+        </>
+      )}
+
       {mobileOpen && (
         <button
           type="button"
@@ -399,35 +472,24 @@ export default function AppShell({
         {mobileSidebar}
       </aside>
 
-      {/* เนื้อหาหลัก — เว้นที่ sidebar */}
+      {/* เนื้อหาหลัก */}
       <div
-        className={`flex min-h-screen min-w-0 flex-col transition-[margin] duration-200 ease-out ${
+        className={`min-h-screen min-w-0 transition-[margin] duration-200 ease-out ${
           collapsed ? "md:ml-[3.75rem]" : "md:ml-[15.75rem]"
         }`}
       >
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-white px-4 md:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-white text-slate-600 hover:bg-slate-50 md:hidden"
-              aria-label="เปิดเมนู"
-              aria-expanded={mobileOpen}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-              </svg>
-            </button>
-            <div className="min-w-0 truncate text-sm font-medium text-slate-500">
-              <span className="hidden sm:inline">ระบบจัดการภายใน · </span>BmBox
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-            <UserMenu name={userName} roleLabel={roleLabel} department={department} />
-          </div>
-        </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="fixed left-4 top-4 z-30 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-white text-slate-600 shadow-sm hover:bg-slate-50 md:hidden"
+          aria-label="เปิดเมนู"
+          aria-expanded={mobileOpen}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
+          </svg>
+        </button>
+        <main className="p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

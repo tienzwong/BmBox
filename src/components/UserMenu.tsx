@@ -3,7 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function UserMenu({ name, roleLabel, department }: { name: string; roleLabel: string; department: string | null }) {
+type UserMenuProps = {
+  name: string;
+  roleLabel: string;
+  department: string | null;
+  variant?: "inline" | "sidebar-footer" | "sidebar-flyout";
+};
+
+export default function UserMenu({
+  name,
+  roleLabel,
+  department,
+  variant = "inline",
+}: UserMenuProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -12,6 +24,25 @@ export default function UserMenu({ name, roleLabel, department }: { name: string
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
     router.refresh();
+  }
+
+  if (variant === "sidebar-footer" || variant === "sidebar-flyout") {
+    return (
+      <div className={variant === "sidebar-flyout" ? "w-56 bg-white p-4" : "border-t border-line px-4 py-3"}>
+        <div className="truncate text-sm font-medium text-slate-800">{name}</div>
+        <div className="truncate text-[11px] text-slate-400">
+          {department ? `${roleLabel} · ${department}` : roleLabel}
+        </div>
+        <button
+          type="button"
+          onClick={logout}
+          disabled={loading}
+          className="btn-outline mt-2 w-full px-3 py-1.5 text-xs"
+        >
+          {loading ? "…" : "ออกจากระบบ"}
+        </button>
+      </div>
+    );
   }
 
   return (
