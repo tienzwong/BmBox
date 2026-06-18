@@ -4,7 +4,9 @@ import { baht, num, thaiDate } from "@/lib/format";
 import SalesChartPanel from "@/components/SalesChartPanel";
 import JobStatusBar from "@/components/JobStatusBar";
 import ExecutiveDashboard from "@/components/ExecutiveDashboard";
+import AccountingSummaryPanel from "@/components/AccountingSummaryPanel";
 import { buildExecutiveMetrics } from "@/lib/dashboard-executive";
+import { buildAccountingSummary } from "@/lib/accounting-reminders";
 import { dailySalesCurrentMonth, monthlySales } from "@/lib/sales-chart";
 import { requireUser } from "@/lib/auth/session";
 import { can, isRole } from "@/lib/auth/permissions";
@@ -14,6 +16,8 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard() {
   const user = await requireUser();
   const showPrice = can(user.role, "viewPrice");
+  const showAccounting =
+    showPrice && (user.role === "admin" || user.role === "management" || user.role === "costing");
   const isExecutive = isRole(user.role) && (user.role === "admin" || user.role === "management");
 
   const [
@@ -28,6 +32,11 @@ export default async function Dashboard() {
     holdCount,
     recentJobs,
     activeJobsForTypes,
+    acceptedAgg,
+    acceptedCount,
+    estimatingAgg,
+    jobsDoneForBilling,
+    poOrderedCount,
   ] = await Promise.all([
     prisma.quotation.count({ where: { isPattern: false } }),
     prisma.paper.count({ where: { active: true } }),
@@ -60,12 +69,46 @@ export default async function Dashboard() {
       where: { status: { not: "cancelled" }, stage: { not: "done" } },
       include: { quotation: { select: { jobType: true } } },
     }),
+    prisma.quotation.aggregate({
+      _sum: { total: true },
+      where: { isPattern: false, status: "accepted" },
+    }),
+    prisma.quotation.count({ where: { isPattern: false, status: "accepted" } }),
+    prisma.quotation.aggregate({
+      _sum: { total: true },
+      where: { isPattern: false, status: "estimating" },
+    }),
+    prisma.job.findMany({
+      where: { status: { not: "cancelled" }, stage: "done" },
+      select: {
+        id: true,
+        code: true,
+        quotation: { select: { total: true } },
+      },
+    }),
+    prisma.purchaseOrder.count({ where: { status: "ordered" } }),
   ]);
 
   const stageCounts = jobStageGroups.map((g) => ({ stage: g.stage, count: g._count.id }));
   const chart1m = dailySalesCurrentMonth(allForChart);
   const chart6m = monthlySales(allForChart, 6);
   const chart1y = monthlySales(allForChart, 12);
+
+  const accountingSummary = showAccounting
+    ? buildAccountingSummary({
+        acceptedQuotationTotal: acceptedAgg._sum.total ?? 0,
+        acceptedQuotationCount: acceptedCount,
+        jobsDone: jobsDoneForBilling.map((j) => ({
+          id: j.id,
+          code: j.code,
+          total: j.quotation?.total ?? 0,
+        })),
+        estimatingCount,
+        estimatingTotal: estimatingAgg._sum.total ?? 0,
+        holdJobCount: holdCount,
+        poOrderedCount,
+      })
+    : null;
 
   const salesChart = <SalesChartPanel data1m={chart1m} data6m={chart6m} data1y={chart1y} />;
 
@@ -102,6 +145,11 @@ export default async function Dashboard() {
           showPrice={showPrice}
           salesChart={showPrice ? salesChart : undefined}
         />
+        {accountingSummary && (
+          <div className="mt-4 md:mt-5">
+            <AccountingSummaryPanel summary={accountingSummary} />
+          </div>
+        )}
       </div>
     );
   }
@@ -121,6 +169,8 @@ export default async function Dashboard() {
       </div>
 
       {showPrice && <div className="order-first md:order-none">{salesChart}</div>}
+
+      {accountingSummary && <AccountingSummaryPanel summary={accountingSummary} />}
 
       <JobStatusBar stageCounts={stageCounts} estimatingCount={estimatingCount} holdCount={holdCount} />
 

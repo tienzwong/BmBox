@@ -317,26 +317,26 @@ export default function AppShell({
 
   const mobileSidebar = (
     <>
-      <div className="flex items-center gap-3 border-b border-line px-5 py-5">
-        <BmLogo className={`${LOGO_H} w-auto shrink-0 text-brand-600`} />
+      <div className="flex items-center gap-3 bg-brand-600 px-5 py-5 text-white">
+        <BmLogo className={`${LOGO_H} w-auto shrink-0 text-white`} />
         <div className="min-w-0">
           <div className="text-sm font-bold leading-tight">BmBox ERP</div>
-          <div className="truncate text-[11px] text-slate-400">เบลสโมทีฟ จำกัด</div>
+          <div className="truncate text-[11px] text-white/70">เบลสโมทีฟ จำกัด</div>
         </div>
         <button
           type="button"
           onClick={closeMobile}
-          className="ml-auto rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+          className="ml-auto rounded-lg p-2 text-white/80 transition hover:bg-white/10"
           aria-label="ปิดเมนู"
         >
           ✕
         </button>
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">{renderMobileNav()}</nav>
-      <div className="shrink-0 border-t border-line p-3">
-        <NotificationBell />
+      <nav className="flex-1 space-y-1 overflow-y-auto bg-white p-3">{renderMobileNav()}</nav>
+      <div className="shrink-0 bg-brand-600 p-4">
+        <NotificationBell tone="header" />
         <div className="mt-3">
-          <UserMenu name={userName} roleLabel={roleLabel} department={department} variant="sidebar-flyout" />
+          <UserMenu name={userName} roleLabel={roleLabel} department={department} variant="mobile-sidebar" />
         </div>
       </div>
     </>

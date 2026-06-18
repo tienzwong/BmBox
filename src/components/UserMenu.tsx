@@ -7,7 +7,7 @@ type UserMenuProps = {
   name: string;
   roleLabel: string;
   department: string | null;
-  variant?: "inline" | "sidebar-footer" | "sidebar-flyout";
+  variant?: "inline" | "sidebar-footer" | "sidebar-flyout" | "mobile-sidebar";
   onOpenMenu?: () => void;
   buttonRef?: Ref<HTMLButtonElement>;
   compact?: boolean;
@@ -49,6 +49,25 @@ export default function UserMenu({
           </div>
         )}
       </button>
+    );
+  }
+
+  if (variant === "mobile-sidebar") {
+    return (
+      <div className="text-white">
+        <div className="truncate text-sm font-semibold">{name}</div>
+        <div className="truncate text-[11px] text-white/70">
+          {department ? `${roleLabel} · ${department}` : roleLabel}
+        </div>
+        <button
+          type="button"
+          onClick={logout}
+          disabled={loading}
+          className="mt-3 w-full rounded-full border border-white/40 bg-white/10 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/20"
+        >
+          {loading ? "…" : "ออกจากระบบ"}
+        </button>
+      </div>
     );
   }
 
