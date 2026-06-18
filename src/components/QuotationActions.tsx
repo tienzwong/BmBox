@@ -31,9 +31,14 @@ export default function QuotationActions({
 
   if (existingJob) {
     return (
-      <Link href={`/jobs/${existingJob.id}`} className="btn-outline print:hidden">
-        ดูใบสั่งงาน {existingJob.code}
-      </Link>
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <Link href={`/jobs/${existingJob.id}`} className="btn-outline">
+          ดูใบสั่งงาน {existingJob.code}
+        </Link>
+        <Link href={`/jobs/${existingJob.id}/print`} className="btn-primary">
+          พิมพ์ใบสั่งงาน + QR
+        </Link>
+      </div>
     );
   }
 

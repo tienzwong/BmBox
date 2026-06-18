@@ -8,10 +8,11 @@ export function middleware(req: NextRequest) {
 
   const isAuthApi = pathname.startsWith("/api/auth");
   const isLogin = pathname === "/login";
+  const isPublicTrack = pathname.startsWith("/track") || pathname.startsWith("/api/track");
 
   // ตรวจแค่การมี cookie ที่ระดับ middleware (เร็ว) — การตรวจสิทธิ์จริงทำในหน้า/API
   if (!token) {
-    if (isLogin || isAuthApi) return NextResponse.next();
+    if (isLogin || isAuthApi || isPublicTrack) return NextResponse.next();
     if (pathname.startsWith("/api")) {
       return NextResponse.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
     }

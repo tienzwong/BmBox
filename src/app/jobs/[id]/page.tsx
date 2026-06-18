@@ -64,7 +64,10 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
             <div className="text-lg font-bold text-slate-800">{job.code}</div>
             <div className="text-sm text-slate-500">{job.customer.name} · {job.title}</div>
           </div>
-          <div className="text-right text-sm">
+          <div className="flex flex-col items-end gap-2 text-sm">
+            <Link href={`/jobs/${job.id}/print`} className="btn-outline text-xs print:hidden">
+              ใบสั่งงาน + QR
+            </Link>
             <div className="text-xs text-slate-400">จำนวน {num(job.quantity)} ชิ้น</div>
           </div>
         </div>

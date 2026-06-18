@@ -75,3 +75,13 @@ body {
     @apply w-full min-w-[36rem] text-sm;
   }
 }
+
+@media print {
+  aside.fixed,
+  header.sticky {
+    display: none !important;
+  }
+  [class*="md:ml-"] {
+    margin-left: 0 !important;
+  }
+}
