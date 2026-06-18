@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-// BmBox ERP — คำนวณค่าเสื่อมราคาเครื่องจักร
+// BmBox ERP — คำนวณค่าเสื่อมราคาเครื่องจักร (ตามทะเบียน BlessMotive)
 // ----------------------------------------------------------------------------
 
 export type MachineDepartment = "prepress" | "printing" | "postpress";
@@ -8,23 +8,40 @@ export type MachineCategory =
   | "plate_maker"
   | "offset_cut2"
   | "offset_cut4"
+  | "silk_screen"
+  | "folding"
   | "paper_cutter"
   | "die_cut"
-  | "gluing";
+  | "gluing"
+  | "coating";
+
+/** กลุ่มแสดงผลตามเอกสารทะเบียนเครื่องจักร */
+export const MACHINE_GROUPS: { label: string; categories: MachineCategory[] }[] = [
+  { label: "เครื่องพิมพ์ Offset", categories: ["offset_cut4", "offset_cut2", "silk_screen"] },
+  { label: "เครื่องพับกระดาษ", categories: ["folding"] },
+  { label: "เครื่องตัดกระดาษ", categories: ["paper_cutter"] },
+  { label: "เครื่องปะกาว", categories: ["gluing"] },
+  { label: "เครื่องปั๊มไดคัท", categories: ["die_cut"] },
+  { label: "เครื่องเคลือบ", categories: ["coating"] },
+  { label: "เครื่องยิงเพลท CTP", categories: ["plate_maker"] },
+];
 
 export const MACHINE_DEPARTMENT_LABEL: Record<MachineDepartment, string> = {
   prepress: "พรีเพลส",
-  printing: "พิมพ์",
+  printing: "ฝ่ายพิมพ์",
   postpress: "หลังพิมพ์",
 };
 
 export const MACHINE_CATEGORY_LABEL: Record<MachineCategory, string> = {
-  plate_maker: "เครื่องยิงเพลท แม่พิมพ์ (CTP)",
-  offset_cut2: "เครื่องพิมพ์ Offset ตัด 2",
-  offset_cut4: "เครื่องพิมพ์ Offset ตัด 4",
-  paper_cutter: "เครื่องตัดผ่ากระดาษ",
-  die_cut: "เครื่องปั้มไดคัท",
+  plate_maker: "เครื่องยิงเพลท CTP",
+  offset_cut4: "Offset ตัด 4",
+  offset_cut2: "Offset ตัด 2",
+  silk_screen: "Silk Screen",
+  folding: "เครื่องพับ",
+  paper_cutter: "เครื่องตัดกระดาษ",
+  die_cut: "เครื่องปั๊มไดคัท",
   gluing: "เครื่องปะกาว",
+  coating: "เครื่องเคลือบ",
 };
 
 export interface DepreciationInput {
@@ -57,22 +74,33 @@ export function calcDepreciationRates(input: DepreciationInput): DepreciationRat
   return { annual, monthly, perHour, per1000, perPlate };
 }
 
-/** ค่าเสื่อมต่องานจากจำนวนแผ่นพิมพ์ */
 export function depreciationForPressSheets(pressSheets: number, per1000Sheets: number): number {
   if (pressSheets <= 0 || per1000Sheets <= 0) return 0;
   return (pressSheets / 1000) * per1000Sheets;
 }
 
-/** ค่าเสื่อมต่องานจากจำนวนกรอบเพลท (พรีเพลส/CTP) */
 export function depreciationForPlates(plateCount: number, perPlate: number): number {
   if (plateCount <= 0 || perPlate <= 0) return 0;
   return plateCount * perPlate;
 }
 
-export function machineDisplayName(name: string, unitLabel?: string | null): string {
+/** ชื่อแสดงในตาราง — ใช้ชื่อเครื่องจากทะเบียน */
+export function machineDisplayName(
+  name: string,
+  shortCode?: string | null,
+  unitLabel?: string | null,
+): string {
+  if (shortCode) return name;
   return unitLabel ? `${name} (${unitLabel})` : name;
 }
 
 export function machineUsesPlates(category: string): boolean {
   return category === "plate_maker";
+}
+
+export function groupMachinesByCatalog<T extends { category: string }>(machines: T[]) {
+  return MACHINE_GROUPS.map((g) => ({
+    ...g,
+    rows: machines.filter((m) => g.categories.includes(m.category as MachineCategory)),
+  })).filter((g) => g.rows.length > 0);
 }

@@ -27,6 +27,7 @@ export interface PressOption extends PressLike {}
 export interface MachineOption {
   id: number;
   name: string;
+  shortCode: string | null;
   unitLabel: string | null;
   department: string;
   category: string;
@@ -719,7 +720,7 @@ export default function QuotationForm({
                                 }`}
                               >
                                 {on ? "✓ " : ""}
-                                {machineDisplayName(m.name, m.unitLabel)}
+                                {machineDisplayName(m.name, m.shortCode, m.unitLabel)}
                                 <span className="ml-1 text-slate-400">({baht(m.depreciationPerPlate)}/เพลท)</span>
                               </button>
                             );
@@ -749,7 +750,7 @@ export default function QuotationForm({
                                 }`}
                               >
                                 {on ? "✓ " : ""}
-                                {machineDisplayName(m.name, m.unitLabel)}
+                                {machineDisplayName(m.name, m.shortCode, m.unitLabel)}
                                 <span className="ml-1 text-slate-400">({baht(m.depreciationPer1000)}/1k)</span>
                               </button>
                             );

@@ -14,7 +14,7 @@ export default async function MachinesPage() {
   const machines = await prisma.machine.findMany({
     where: { active: true },
     include: { press: { select: { id: true, name: true } } },
-    orderBy: [{ department: "asc" }, { category: "asc" }, { id: "asc" }],
+    orderBy: [{ machineCode: "asc" }, { id: "asc" }],
   });
 
   return (
@@ -26,7 +26,7 @@ export default async function MachinesPage() {
           </Link>
           <h1 className="mt-1 text-xl font-bold text-slate-800">เครื่องจักร & ค่าเสื่อมราคา</h1>
           <p className="text-sm text-slate-500">
-            ทะเบียนเครื่องพิมพ์และเครื่องหลังพิมพ์ — ใช้คำนวณต้นทุนค่าเสื่อมในใบเสนอราคา
+            ทะเบียนเครื่องจักร BlessMotive — รหัสเครื่อง, ชื่อ, ขนาด, ประเภท และต้นทุนค่าเสื่อมสำหรับใบเสนอราคา
           </p>
         </div>
       </div>
@@ -34,7 +34,13 @@ export default async function MachinesPage() {
       <MachineManager
         machines={machines.map((m) => ({
           id: m.id,
+          machineCode: m.machineCode,
           name: m.name,
+          shortCode: m.shortCode,
+          maxSize: m.maxSize,
+          minSize: m.minSize,
+          typeLabel: m.typeLabel,
+          location: m.location,
           department: m.department,
           category: m.category,
           unitLabel: m.unitLabel,

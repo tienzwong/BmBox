@@ -37,7 +37,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const machine = await prisma.machine.update({
       where: { id: Number(id) },
       data: {
+        ...(b.machineCode !== undefined ? { machineCode: b.machineCode || null } : {}),
         ...(b.name != null ? { name: b.name } : {}),
+        ...(b.shortCode !== undefined ? { shortCode: b.shortCode || null } : {}),
+        ...(b.maxSize !== undefined ? { maxSize: b.maxSize || null } : {}),
+        ...(b.minSize !== undefined ? { minSize: b.minSize || null } : {}),
+        ...(b.typeLabel !== undefined ? { typeLabel: b.typeLabel || null } : {}),
+        ...(b.location !== undefined ? { location: b.location || null } : {}),
         ...(b.unitLabel !== undefined ? { unitLabel: b.unitLabel || null } : {}),
         ...(b.pressId !== undefined ? { pressId: b.pressId ? Number(b.pressId) : null } : {}),
         purchasePrice,

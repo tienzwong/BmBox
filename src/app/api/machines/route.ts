@@ -6,7 +6,13 @@ import { calcDepreciationRates } from "@/lib/machine-depreciation";
 
 function toPayload(m: {
   id: number;
+  machineCode: string | null;
   name: string;
+  shortCode: string | null;
+  maxSize: string | null;
+  minSize: string | null;
+  typeLabel: string | null;
+  location: string | null;
   department: string;
   category: string;
   unitLabel: string | null;
@@ -26,7 +32,13 @@ function toPayload(m: {
 }) {
   return {
     id: m.id,
+    machineCode: m.machineCode,
     name: m.name,
+    shortCode: m.shortCode,
+    maxSize: m.maxSize,
+    minSize: m.minSize,
+    typeLabel: m.typeLabel,
+    location: m.location,
     department: m.department,
     category: m.category,
     unitLabel: m.unitLabel,
@@ -54,7 +66,7 @@ export async function GET() {
   const machines = await prisma.machine.findMany({
     where: { active: true },
     include: { press: { select: { id: true, name: true } } },
-    orderBy: [{ department: "asc" }, { category: "asc" }, { id: "asc" }],
+    orderBy: [{ machineCode: "asc" }, { id: "asc" }],
   });
   return NextResponse.json(machines.map(toPayload));
 }
@@ -79,7 +91,13 @@ export async function POST(req: Request) {
     });
     const machine = await prisma.machine.create({
       data: {
+        machineCode: b.machineCode || null,
         name: b.name,
+        shortCode: b.shortCode || null,
+        maxSize: b.maxSize || null,
+        minSize: b.minSize || null,
+        typeLabel: b.typeLabel || null,
+        location: b.location || "บริษัท",
         department: b.department,
         category: b.category,
         unitLabel: b.unitLabel || null,

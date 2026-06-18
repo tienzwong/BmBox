@@ -79,10 +79,16 @@ model Press {
 /// เครื่องจักรโรงพิมพ์ — ต้นทุนค่าเสื่อมราคา (พรีเพลส + พิมพ์ + หลังพิมพ์)
 model Machine {
   id                   Int      @id @default(autoincrement())
-  name                 String
+  machineCode          String?  @unique // รหัสเครื่อง เช่น MC1018
+  name                 String   // ชื่อเครื่อง เช่น Heidelberg M.O. 6 สี [101]
+  shortCode            String?  // รหัสเรียก เช่น MO6 [101]
+  maxSize              String?  // ขนาดใหญ่สุด เช่น (19"x25.5")
+  minSize              String?  // ขนาดเล็กสุด
+  typeLabel            String?  // ประเภท เช่น ตัด 4, Silk Screen
+  location             String?  @default("บริษัท")
   department           String   // prepress | printing | postpress
-  category             String   // plate_maker | offset_cut2 | offset_cut4 | paper_cutter | die_cut | gluing
-  unitLabel            String?  // เช่น เครื่องที่ 1 (กรณีมีหลายเครื่องประเภทเดียวกัน)
+  category             String   // plate_maker | offset_cut2 | offset_cut4 | silk_screen | folding | paper_cutter | die_cut | gluing | coating
+  unitLabel            String?  // legacy — ใช้ shortCode แทนใน UI ใหม่
   pressId              Int?     @unique
   press                Press?   @relation(fields: [pressId], references: [id])
   purchasePrice        Float    @default(0) // ราคาทุนเครื่อง (บาท)

@@ -55,6 +55,7 @@ export default async function NewQuotationPage() {
         postpressMachines={postpressMachines.map((m) => ({
           id: m.id,
           name: m.name,
+          shortCode: m.shortCode,
           unitLabel: m.unitLabel,
           department: m.department,
           category: m.category,
@@ -64,6 +65,7 @@ export default async function NewQuotationPage() {
         prepressMachines={prepressMachines.map((m) => ({
           id: m.id,
           name: m.name,
+          shortCode: m.shortCode,
           unitLabel: m.unitLabel,
           department: m.department,
           category: m.category,
