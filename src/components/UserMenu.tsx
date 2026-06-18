@@ -1,13 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type Ref } from "react";
 
 type UserMenuProps = {
   name: string;
   roleLabel: string;
   department: string | null;
   variant?: "inline" | "sidebar-footer" | "sidebar-flyout";
+  onOpenMenu?: () => void;
+  buttonRef?: Ref<HTMLButtonElement>;
 };
 
 export default function UserMenu({
@@ -15,6 +17,8 @@ export default function UserMenu({
   roleLabel,
   department,
   variant = "inline",
+  onOpenMenu,
+  buttonRef,
 }: UserMenuProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -26,9 +30,25 @@ export default function UserMenu({
     router.refresh();
   }
 
-  if (variant === "sidebar-footer" || variant === "sidebar-flyout") {
+  if (variant === "sidebar-footer") {
     return (
-      <div className={variant === "sidebar-flyout" ? "w-56 bg-white p-4" : "px-4 pb-0 pt-0"}>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={onOpenMenu}
+        className="w-full px-4 pb-3 pt-0 text-left transition hover:opacity-80"
+      >
+        <div className="truncate text-sm font-semibold text-slate-800">{name}</div>
+        <div className="truncate text-[11px] text-slate-400">
+          {department ? `${roleLabel} · ${department}` : roleLabel}
+        </div>
+      </button>
+    );
+  }
+
+  if (variant === "sidebar-flyout") {
+    return (
+      <div className="w-56 bg-white p-4">
         <div className="truncate text-sm font-semibold text-slate-800">{name}</div>
         <div className="truncate text-[11px] text-slate-400">
           {department ? `${roleLabel} · ${department}` : roleLabel}

@@ -13,6 +13,8 @@ import NotificationBell from "@/components/NotificationBell";
 const STORAGE_KEY = "bmbox-sidebar-collapsed";
 const RAIL_W = "w-[3.75rem]";
 const ROW_H = "h-11";
+const NAV_ROW_MAX = 44;
+const NAV_ROW_MIN = 32;
 const HEADER_H = "h-16";
 const LOGO_H = "h-[2.625rem]"; // +50% จาก h-7
 const SIDEBAR_EXPANDED = "15.75rem";
@@ -40,6 +42,9 @@ export default function AppShell({
   const [userFlyoutTop, setUserFlyoutTop] = useState(0);
   const masterBtnRef = useRef<HTMLButtonElement>(null);
   const userBtnRef = useRef<HTMLButtonElement>(null);
+  const userFooterRef = useRef<HTMLButtonElement>(null);
+  const navSlotRef = useRef<HTMLDivElement>(null);
+  const [navRowPx, setNavRowPx] = useState(NAV_ROW_MAX);
 
   const masterDropdown = navItems.find((item) => item.type === "dropdown");
   const masterChildren = masterDropdown?.type === "dropdown" ? masterDropdown.children : [];
@@ -61,6 +66,26 @@ export default function AppShell({
       /* ignore */
     }
   }, []);
+
+  useEffect(() => {
+    const el = navSlotRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const h = el.getBoundingClientRect().height;
+      const n = Math.max(navItems.length, 1);
+      setNavRowPx(Math.max(NAV_ROW_MIN, Math.min(NAV_ROW_MAX, Math.floor(h / n))));
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [navItems.length, collapsed]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -131,23 +156,34 @@ export default function AppShell({
     setMasterOpen(true);
   }
 
-  function toggleUserFlyout() {
-    if (!collapsed) return;
+  function openUserFlyout(anchor: HTMLElement) {
+    closeMasterFlyout();
+    setUserFlyoutTop(anchor.getBoundingClientRect().top);
+    setUserOpen(true);
+  }
+
+  function toggleUserFlyoutFromIcon() {
     if (userOpen) {
       closeUserFlyout();
       return;
     }
-    closeMasterFlyout();
-    if (userBtnRef.current) {
-      setUserFlyoutTop(userBtnRef.current.getBoundingClientRect().top);
+    if (userBtnRef.current) openUserFlyout(userBtnRef.current);
+  }
+
+  function toggleUserFlyoutFromFooter() {
+    if (userOpen) {
+      closeUserFlyout();
+      return;
     }
-    setUserOpen(true);
+    if (userFooterRef.current) openUserFlyout(userFooterRef.current);
   }
 
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
 
+  const navRowStyle = { height: navRowPx, minHeight: NAV_ROW_MIN };
+
   function iconBtnClass(active: boolean) {
-    return `flex ${ROW_H} w-full shrink-0 items-center justify-center transition ${
+    return `flex w-full shrink-0 items-center justify-center transition ${
       active
         ? "bg-brand-700 text-white"
         : "text-white/70 hover:bg-brand-700/80 hover:text-white"
@@ -155,7 +191,7 @@ export default function AppShell({
   }
 
   function labelLinkClass(active: boolean) {
-    return `flex ${ROW_H} w-full shrink-0 items-center truncate px-4 text-sm transition ${
+    return `flex w-full shrink-0 items-center truncate px-4 text-sm transition ${
       active
         ? "bg-brand-50 font-medium text-brand-700"
         : "text-slate-600 hover:bg-slate-50 hover:text-brand-700"
@@ -274,8 +310,10 @@ export default function AppShell({
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">{renderMobileNav()}</nav>
       <div className="shrink-0 border-t border-line p-3">
         <NotificationBell />
+        <div className="mt-3">
+          <UserMenu name={userName} roleLabel={roleLabel} department={department} variant="sidebar-flyout" />
+        </div>
       </div>
-      <UserMenu name={userName} roleLabel={roleLabel} department={department} variant="sidebar-footer" />
     </>
   );
 
@@ -290,16 +328,18 @@ export default function AppShell({
           className="fixed inset-y-0 left-0 z-40 flex h-screen flex-col"
           style={{ width: sidebarWidth, transition: "width 200ms ease-out" }}
         >
-          {/* เนื้อหา sidebar */}
-          <div className="flex min-h-0 flex-1 overflow-hidden">
-            <div className={`flex ${RAIL_W} shrink-0 flex-col bg-brand-800 text-white`}>
+          {/* แถบน้ำเงินเต็มความสูง */}
+          <div className={`absolute inset-y-0 left-0 ${RAIL_W} bg-brand-800`} aria-hidden />
+
+          <div ref={navSlotRef} className="relative flex min-h-0 flex-1 overflow-hidden">
+            <div className={`relative flex ${RAIL_W} shrink-0 flex-col text-white`}>
               <div
                 className={`flex ${HEADER_H} shrink-0 items-center justify-center border-b border-white/10 px-1`}
               >
                 <BmLogo className={`${LOGO_H} w-auto max-w-[3.25rem] text-white`} />
               </div>
 
-              <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <nav className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 {navItems.map((item) => {
                   if (item.type === "link") {
                     const active = isActive(item.href);
@@ -309,6 +349,7 @@ export default function AppShell({
                         href={item.href}
                         title={collapsed ? item.label : undefined}
                         className={iconBtnClass(active)}
+                        style={navRowStyle}
                       >
                         <NavIcon name={item.icon} className="h-5 w-5" />
                       </Link>
@@ -323,6 +364,7 @@ export default function AppShell({
                       title={collapsed ? item.label : undefined}
                       onClick={toggleMasterFlyout}
                       className={iconBtnClass(masterChildActive || masterOpen)}
+                      style={navRowStyle}
                     >
                       <NavIcon name={item.icon} className="h-5 w-5" />
                     </button>
@@ -332,7 +374,7 @@ export default function AppShell({
             </div>
 
             {!collapsed && (
-              <div className="flex w-48 shrink-0 flex-col border-r border-line bg-white">
+              <div className="relative flex w-48 shrink-0 flex-col border-r border-line bg-white">
                 <div
                   className={`flex ${HEADER_H} shrink-0 items-center justify-between border-b border-line px-4`}
                 >
@@ -351,11 +393,16 @@ export default function AppShell({
                   </button>
                 </div>
 
-                <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                <nav className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   {navItems.map((item) => {
                     if (item.type === "link") {
                       return (
-                        <Link key={item.href} href={item.href} className={labelLinkClass(isActive(item.href))}>
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={labelLinkClass(isActive(item.href))}
+                          style={navRowStyle}
+                        >
                           {item.label}
                         </Link>
                       );
@@ -367,6 +414,7 @@ export default function AppShell({
                         type="button"
                         onClick={toggleMasterFlyout}
                         className={`${labelLinkClass(masterChildActive || masterOpen)} justify-between gap-2`}
+                        style={navRowStyle}
                       >
                         <span className="truncate">{item.label}</span>
                         <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
@@ -378,28 +426,27 @@ export default function AppShell({
             )}
           </div>
 
-          {/* Footer — กระดิ่งเหนือ icon คน, ชื่อผู้ใช้ตรงแถว icon */}
-          <div className="flex shrink-0">
-            <div className={`${RAIL_W} shrink-0 bg-brand-800`}>
+          {/* Footer */}
+          <div className="relative flex shrink-0">
+            <div className={`relative ${RAIL_W} shrink-0`}>
               <NotificationBell tone="rail" panelLeft={sidebarWidth} />
             </div>
             {!collapsed && <div className={`${ROW_H} w-48 shrink-0 bg-white`} aria-hidden />}
           </div>
-          <div className="flex shrink-0 pb-3">
+          <div className="relative flex shrink-0">
             <div
-              className={`${RAIL_W} shrink-0 bg-brand-800 ${
-                collapsed
-                  ? `flex ${ROW_H} items-center justify-center`
-                  : "flex items-start justify-center pt-0.5"
+              className={`relative ${RAIL_W} shrink-0 ${
+                collapsed ? `flex ${ROW_H} items-center justify-center` : "flex items-start justify-center pt-0.5"
               }`}
             >
               <button
                 ref={userBtnRef}
                 type="button"
-                title={collapsed ? userName : undefined}
-                onClick={collapsed ? toggleUserFlyout : undefined}
+                title={userName}
+                onClick={toggleUserFlyoutFromIcon}
                 className="flex h-5 w-full items-center justify-center text-white transition hover:opacity-80"
                 aria-label="บัญชีผู้ใช้"
+                aria-expanded={userOpen}
               >
                 <User className="h-5 w-5" strokeWidth={2} />
               </button>
@@ -411,6 +458,8 @@ export default function AppShell({
                   roleLabel={roleLabel}
                   department={department}
                   variant="sidebar-footer"
+                  buttonRef={userFooterRef}
+                  onOpenMenu={toggleUserFlyoutFromFooter}
                 />
               </div>
             )}
@@ -449,8 +498,8 @@ export default function AppShell({
         </>
       )}
 
-      {/* Floating menu — บัญชีผู้ใช้ (เมื่อย่อ sidebar) */}
-      {userOpen && collapsed && (
+      {/* Floating menu — บัญชีผู้ใช้ */}
+      {userOpen && (
         <>
           <button
             type="button"
