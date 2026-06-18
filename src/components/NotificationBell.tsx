@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
+import { clampFlyoutTop } from "@/lib/flyout-position";
 
 interface NotifItem {
   id: number;
@@ -39,7 +40,11 @@ export default function NotificationBell({
   const [loading, setLoading] = useState(false);
   const [panelTop, setPanelTop] = useState(0);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  const isRail = tone === "rail";
+  const isHeader = tone === "header";
 
   const load = useCallback(async () => {
     try {
@@ -62,11 +67,22 @@ export default function NotificationBell({
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current || !popupRef.current) return;
+    const anchor = btnRef.current.getBoundingClientRect();
+    const panel = popupRef.current.getBoundingClientRect();
+    if (isRail) {
+      setPanelTop(clampFlyoutTop(anchor, panel.height));
+    } else if (isHeader) {
+      setPanelTop(anchor.bottom + 4);
+    }
+  }, [open, isRail, isHeader, items.length]);
 
   async function markRead(id: number) {
     await fetch("/api/notifications", {
@@ -95,14 +111,7 @@ export default function NotificationBell({
     if (n.href) router.push(n.href);
   }
 
-  const isRail = tone === "rail";
-  const isHeader = tone === "header";
-
   function toggleOpen() {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setPanelTop(isHeader ? rect.bottom + 4 : rect.top);
-    }
     setOpen((o) => {
       if (!o) void load();
       return !o;
@@ -110,7 +119,7 @@ export default function NotificationBell({
   }
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative" ref={wrapRef}>
       <button
         ref={btnRef}
         type="button"
@@ -143,11 +152,12 @@ export default function NotificationBell({
 
       {open && (
         <div
+          ref={popupRef}
           className={
             isRail
-              ? "fixed z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-white shadow-lg"
+              ? "fixed z-50 flex max-h-[calc(100vh-1rem)] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-line bg-white shadow-lg"
               : isHeader
-                ? "fixed right-4 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-white shadow-lg"
+                ? "fixed right-4 z-50 flex max-h-[calc(100vh-1rem)] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-line bg-white shadow-lg"
                 : "absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-white shadow-lg"
           }
           style={
@@ -171,7 +181,7 @@ export default function NotificationBell({
               </button>
             )}
           </div>
-          <ul className="max-h-80 overflow-y-auto">
+          <ul className="min-h-0 flex-1 overflow-y-auto">
             {items.length === 0 ? (
               <li className="px-4 py-8 text-center text-xs text-slate-400">ไม่มีการแจ้งเตือน</li>
             ) : (

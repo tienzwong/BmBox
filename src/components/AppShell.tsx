@@ -10,6 +10,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import UserMenu from "@/components/UserMenu";
 import NotificationBell from "@/components/NotificationBell";
 import { resolvePageTitle } from "@/lib/page-title";
+import { clampFlyoutTop } from "@/lib/flyout-position";
 
 const STORAGE_KEY = "bmbox-sidebar-collapsed";
 const RAIL_W = "w-[3.75rem]";
@@ -45,6 +46,8 @@ export default function AppShell({
   const masterBtnRef = useRef<HTMLButtonElement>(null);
   const userBtnRef = useRef<HTMLButtonElement>(null);
   const userFooterRef = useRef<HTMLButtonElement>(null);
+  const userAnchorRef = useRef<HTMLElement | null>(null);
+  const userPanelRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const [navRowPx, setNavRowPx] = useState(NAV_ROW_MAX);
 
@@ -125,6 +128,13 @@ export default function AppShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [userOpen, closeUserFlyout]);
 
+  useLayoutEffect(() => {
+    if (!userOpen || !userAnchorRef.current || !userPanelRef.current) return;
+    const anchor = userAnchorRef.current.getBoundingClientRect();
+    const panel = userPanelRef.current.getBoundingClientRect();
+    setUserFlyoutTop(clampFlyoutTop(anchor, panel.height));
+  }, [userOpen]);
+
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -164,7 +174,7 @@ export default function AppShell({
 
   function openUserFlyout(anchor: HTMLElement) {
     closeMasterFlyout();
-    setUserFlyoutTop(anchor.getBoundingClientRect().top);
+    userAnchorRef.current = anchor;
     setUserOpen(true);
   }
 
@@ -524,7 +534,8 @@ export default function AppShell({
             aria-label="ปิดเมนูผู้ใช้"
           />
           <div
-            className="fixed z-50 hidden overflow-hidden rounded-lg border border-line bg-white shadow-xl md:block"
+            ref={userPanelRef}
+            className="fixed z-50 hidden max-h-[calc(100vh-1rem)] overflow-hidden rounded-lg border border-line bg-white shadow-xl md:block"
             style={{ left: sidebarWidth, top: userFlyoutTop }}
           >
             <UserMenu
