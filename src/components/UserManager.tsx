@@ -22,6 +22,54 @@ export default function UserManager({ users }: { users: UserRow[] }) {
   const [form, setForm] = useState({ ...empty });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState<UserRow | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", department: "", password: "" });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  function openEdit(u: UserRow) {
+    setEditing(u);
+    setEditForm({ name: u.name, department: u.department ?? "", password: "" });
+    setEditError("");
+  }
+
+  function closeEdit() {
+    setEditing(null);
+    setEditForm({ name: "", department: "", password: "" });
+    setEditError("");
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    setEditError("");
+    if (!editForm.name.trim()) {
+      setEditError("กรุณาระบุชื่อ-สกุล");
+      return;
+    }
+    if (editForm.password && editForm.password.length < 8) {
+      setEditError("รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร");
+      return;
+    }
+    setEditSaving(true);
+    const body: { name: string; department: string; password?: string } = {
+      name: editForm.name.trim(),
+      department: editForm.department.trim(),
+    };
+    if (editForm.password) body.password = editForm.password;
+
+    const res = await fetch(`/api/users/${editing.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setEditSaving(false);
+    if (!res.ok) {
+      setEditError((await res.json()).error || "บันทึกไม่สำเร็จ");
+      return;
+    }
+    closeEdit();
+    router.refresh();
+  }
 
   async function add() {
     setError("");
@@ -96,6 +144,7 @@ export default function UserManager({ users }: { users: UserRow[] }) {
               <th className="px-5 py-2.5 font-medium">บทบาท</th>
               <th className="px-5 py-2.5 text-center font-medium">เห็นต้นทุน</th>
               <th className="px-5 py-2.5 text-center font-medium">สถานะ</th>
+              <th className="px-5 py-2.5 text-right font-medium">จัดการ</th>
             </tr>
           </thead>
           <tbody>
@@ -123,6 +172,11 @@ export default function UserManager({ users }: { users: UserRow[] }) {
                       <span className="badge bg-red-50 text-red-600">ปิด</span>
                     )}
                   </td>
+                  <td className="px-5 py-3 text-right">
+                    <button type="button" className="btn-ghost text-xs" onClick={() => openEdit(u)}>
+                      แก้ไข
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -130,6 +184,60 @@ export default function UserManager({ users }: { users: UserRow[] }) {
           </table>
         </div>
       </div>
+
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="card w-full max-w-md p-5 shadow-xl" role="dialog" aria-labelledby="edit-user-title">
+            <h2 id="edit-user-title" className="text-sm font-semibold text-slate-800">
+              แก้ไขผู้ใช้: {editing.username}
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              บทบาท: {ROLE_LABEL[editing.role as Role] ?? editing.role} · ชื่อ login แก้ไม่ได้
+            </p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="label">ชื่อ-สกุล</label>
+                <input
+                  className="input"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">แผนก / ตำแหน่ง</label>
+                <input
+                  className="input"
+                  value={editForm.department}
+                  onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                  placeholder="เช่น ฝ่ายขาย, โรงพิมพ์"
+                />
+              </div>
+              <div>
+                <label className="label">รหัสผ่านใหม่</label>
+                <input
+                  type="password"
+                  className="input"
+                  value={editForm.password}
+                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                  placeholder="เว้นว่างถ้าไม่เปลี่ยน"
+                />
+                <p className="mt-1 text-[11px] text-slate-400">อย่างน้อย 8 ตัวอักษร · ว่าง = คงรหัสเดิม</p>
+              </div>
+            </div>
+            {editError && (
+              <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{editError}</div>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="btn-ghost text-sm" onClick={closeEdit} disabled={editSaving}>
+                ยกเลิก
+              </button>
+              <button type="button" className="btn-primary text-sm" onClick={saveEdit} disabled={editSaving}>
+                {editSaving ? "กำลังบันทึก…" : "บันทึก"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

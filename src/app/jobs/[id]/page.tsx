@@ -14,6 +14,7 @@ import {
 } from "@/lib/labels";
 import { computeJobProgress } from "@/lib/job-progress";
 import JobProgressBar from "@/components/JobProgressBar";
+import JobTimeline from "@/components/JobTimeline";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,20 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
     },
   });
   if (!job) notFound();
+
+  const events = await prisma.jobEvent.findMany({
+    where: { jobId: job.id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      type: true,
+      module: true,
+      title: true,
+      detail: true,
+      actorName: true,
+      createdAt: true,
+    },
+  });
 
   const progressSteps = computeJobProgress(job);
 
@@ -85,6 +100,8 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
           <Row label="สถานะ"><Badge o={optLabel(SHIPMENT_STATUS, job.shipment?.status ?? "preparing")} /></Row>
         </Card>
       </div>
+
+      <JobTimeline events={events} />
 
       <div className="card p-4 text-sm text-slate-500">
         <div className="flex flex-wrap gap-x-6 gap-y-1">

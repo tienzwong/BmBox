@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import UserMenu from "@/components/UserMenu";
+import NotificationBell from "@/components/NotificationBell";
 
 export interface NavLink {
   href: string;
@@ -158,7 +159,10 @@ export default function AppShell({
               <span className="hidden sm:inline">ระบบจัดการภายใน · </span>BmBox
             </div>
           </div>
-          <UserMenu name={userName} roleLabel={roleLabel} department={department} />
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <UserMenu name={userName} roleLabel={roleLabel} department={department} />
+          </div>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>

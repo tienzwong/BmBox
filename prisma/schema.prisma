@@ -21,6 +21,8 @@ model User {
   active       Boolean   @default(true)
   createdAt    DateTime  @default(now())
   sessions     Session[]
+  jobEvents    JobEvent[]
+  notifications Notification[]
 }
 
 model Session {
@@ -135,6 +137,42 @@ model Job {
   postpress   Postpress?
   shipment    Shipment?
   costEntries CostEntry[]
+  events      JobEvent[]
+  notifications Notification[]
+}
+
+/// ประวัติเหตุการณ์ / timeline ของใบสั่งงาน
+model JobEvent {
+  id        Int      @id @default(autoincrement())
+  jobId     Int
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  type      String   // created | status_change | stage_change
+  module    String   // job | prepress | production | postpress | shipping
+  title     String
+  detail    String?
+  meta      String?  // JSON snapshot การเปลี่ยนแปลง
+  actorId   Int?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName String?
+  createdAt DateTime @default(now())
+
+  notifications Notification[]
+}
+
+/// แจ้งเตือนในระบบ (ต่อผู้ใช้)
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     Int?
+  job       Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  eventId   Int?
+  event     JobEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  title     String
+  body      String?
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
 }
 
 model Prepress {
