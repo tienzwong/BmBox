@@ -18,31 +18,11 @@ export interface NavSection {
   links: NavLink[];
 }
 
-const RAIL_ICONS = ["▦", "☷", "▤"] as const;
-const STORAGE_KEY = "bmbox-sidebar-collapsed";
-
-function ChevronIcon({ direction }: { direction: "left" | "right" }) {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      {direction === "left" ? (
-        <path d="M15 18l-6-6 6-6" />
-      ) : (
-        <path d="M9 18l6-6-6-6" />
-      )}
-    </svg>
-  );
-}
-
+const RAIL_ICONS: { symbol: string; emoji?: boolean }[] = [
+  { symbol: "▦" },
+  { symbol: "☰" },
+  { symbol: "✏️", emoji: true }, // วาดเส้น — emoji ปรับเป็นขาวด้วย invert
+];
 export default function AppShell({
   children,
   sections,
@@ -58,7 +38,6 @@ export default function AppShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState(0);
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
@@ -66,14 +45,6 @@ export default function AppShell({
   useEffect(() => {
     closeMobile();
   }, [pathname, closeMobile]);
-
-  useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -106,28 +77,8 @@ export default function AppShell({
     setActiveSection(sectionFromPath);
   }, [sectionFromPath]);
 
-  function toggleCollapsed() {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }
-
   function selectSection(index: number) {
     setActiveSection(index);
-    if (collapsed) {
-      setCollapsed(false);
-      try {
-        localStorage.setItem(STORAGE_KEY, "0");
-      } catch {
-        /* ignore */
-      }
-    }
   }
 
   const current = sections[activeSection] ?? sections[0];
@@ -188,8 +139,8 @@ export default function AppShell({
 
   return (
     <div className="flex min-h-screen">
-      {/* Desktop — two-tier sidebar (REF: icon rail + collapsible sub-panel) */}
-      <div className="relative hidden shrink-0 md:flex">
+      {/* Desktop — two-tier sidebar (icon rail + sub-panel) */}
+      <div className="hidden shrink-0 md:flex">
         {/* Icon rail */}
         <aside className="flex w-[3.75rem] flex-col bg-brand-800 text-white">
           <div className="flex h-14 items-center justify-center border-b border-white/10">
@@ -200,7 +151,7 @@ export default function AppShell({
 
           <nav className="flex flex-1 flex-col items-center gap-1 py-3">
             {sections.map((section, i) => {
-              const railIcon = RAIL_ICONS[i] ?? "•";
+              const rail = RAIL_ICONS[i] ?? { symbol: "•" };
               const sectionActive =
                 activeSection === i || section.links.some((l) => isActive(l.href));
               return (
@@ -215,7 +166,15 @@ export default function AppShell({
                       : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  {railIcon}
+                  <span
+                    className={
+                      rail.emoji
+                        ? "inline-block text-base leading-none brightness-0 invert"
+                        : undefined
+                    }
+                  >
+                    {rail.symbol}
+                  </span>
                 </button>
               );
             })}
@@ -227,62 +186,41 @@ export default function AppShell({
         </aside>
 
         {/* Sub-panel */}
-        <aside
-          className={`relative flex flex-col border-r border-line bg-white transition-[width] duration-200 ease-out ${
-            collapsed ? "w-0 overflow-hidden border-r-0" : "w-60"
-          }`}
-        >
-          {!collapsed && (
-            <>
-              <div className="border-b border-line px-5 py-4">
-                <div className="text-base font-bold text-slate-800">{panelTitle}</div>
-                <div className="text-[11px] text-slate-400">เบลสโมทีฟ จำกัด</div>
-              </div>
+        <aside className="relative flex w-60 flex-col border-r border-line bg-white">
+          <div className="border-b border-line px-5 py-4">
+            <div className="text-base font-bold text-slate-800">{panelTitle}</div>
+            <div className="text-[11px] text-slate-400">เบลสโมทีฟ จำกัด</div>
+          </div>
 
-              <nav className="flex-1 overflow-y-auto p-3">
-                <div className="space-y-1">
-                  {current?.links.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                        isActive(link.href)
-                          ? "bg-brand-50 font-medium text-brand-700"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-brand-700"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm ${
-                          isActive(link.href) ? "bg-brand-100 text-brand-700" : "bg-slate-100 text-slate-500"
-                        } ${link.iconClass ?? ""}`}
-                      >
-                        {link.icon}
-                      </span>
-                      <span className="truncate">{link.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </nav>
+          <nav className="flex-1 overflow-y-auto p-3">
+            <div className="space-y-1">
+              {current?.links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                    isActive(link.href)
+                      ? "bg-brand-50 font-medium text-brand-700"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-brand-700"
+                  }`}
+                >
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm ${
+                      isActive(link.href) ? "bg-brand-100 text-brand-700" : "bg-slate-100 text-slate-500"
+                    } ${link.iconClass ?? ""}`}
+                  >
+                    {link.icon}
+                  </span>
+                  <span className="truncate">{link.label}</span>
+                </Link>
+              ))}
+            </div>
+          </nav>
 
-              <div className="border-t border-line p-4 text-[11px] text-slate-400">
-                โรงพิมพ์แพคเกจจิ้งกระดาษ
-              </div>
-            </>
-          )}
+          <div className="border-t border-line p-4 text-[11px] text-slate-400">
+            โรงพิมพ์แพคเกจจิ้งกระดาษ
+          </div>
         </aside>
-
-        {/* Collapse toggle — วงกลมบนขอบ panel (REF) */}
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          className={`absolute top-6 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-brand-200 bg-white text-brand-600 shadow-md transition hover:bg-brand-50 ${
-            collapsed ? "left-[3.35rem] -translate-x-1/2" : "left-[calc(3.75rem+15rem-0.875rem)]"
-          }`}
-          aria-label={collapsed ? "ขยายเมนู" : "หดเมนู"}
-          title={collapsed ? "ขยายเมนู" : "หดเมนู"}
-        >
-          <ChevronIcon direction={collapsed ? "right" : "left"} />
-        </button>
       </div>
 
       {/* Mobile drawer */}
