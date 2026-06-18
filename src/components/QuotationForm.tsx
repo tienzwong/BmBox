@@ -523,37 +523,41 @@ export default function QuotationForm({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div>
-                        <label className="label">กว้างงาน (ซม.)</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="min-w-0">
+                        <label className="label-fixed">กว้าง (ซม.)</label>
                         <input type="number" step="0.1" className="input" value={it.pieceW}
                           onChange={(e) => updateItem(it.id, { pieceW: Number(e.target.value) })} />
                       </div>
-                      <div>
-                        <label className="label">ยาวงาน (ซม.)</label>
+                      <div className="min-w-0">
+                        <label className="label-fixed">ยาว (ซม.)</label>
                         <input type="number" step="0.1" className="input" value={it.pieceH}
                           onChange={(e) => updateItem(it.id, { pieceH: Number(e.target.value) })} />
                       </div>
-                      <div>
-                        <label className="label">ตัดตก (ซม.)</label>
+                      <div className="min-w-0">
+                        <label className="label-fixed">ตัดตก (ซม.)</label>
                         <input type="number" step="0.1" className="input" value={it.bleed}
                           onChange={(e) => updateItem(it.id, { bleed: Number(e.target.value) })} />
                       </div>
-                      {it.layoutCategory === "book" && (
-                        <div>
-                          <label className="label">จำนวนหน้า</label>
-                          <input type="number" className="input" value={it.pageCount}
-                            onChange={(e) => updateItem(it.id, { pageCount: Number(e.target.value) })} />
-                        </div>
-                      )}
-                      {it.layoutCategory === "set" && (
-                        <div>
-                          <label className="label">ชุด/เล่ม</label>
-                          <input type="number" className="input" value={it.setsPerBook}
-                            onChange={(e) => updateItem(it.id, { setsPerBook: Number(e.target.value) })} />
-                        </div>
-                      )}
                     </div>
+                    {(it.layoutCategory === "book" || it.layoutCategory === "set") && (
+                      <div className="grid grid-cols-3 gap-3">
+                        {it.layoutCategory === "book" && (
+                          <div className="min-w-0">
+                            <label className="label-fixed">จำนวนหน้า</label>
+                            <input type="number" className="input" value={it.pageCount}
+                              onChange={(e) => updateItem(it.id, { pageCount: Number(e.target.value) })} />
+                          </div>
+                        )}
+                        {it.layoutCategory === "set" && (
+                          <div className="min-w-0">
+                            <label className="label-fixed">ชุด/เล่ม</label>
+                            <input type="number" className="input" value={it.setsPerBook}
+                              onChange={(e) => updateItem(it.id, { setsPerBook: Number(e.target.value) })} />
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* เลือกกระดาษหลายขนาดเพื่อเทียบ */}
                     <div>
