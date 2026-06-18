@@ -32,6 +32,58 @@ const BLANK = {
   knifeCount: "1",
 };
 
+const DIMENSION_FIELDS = [
+  {
+    key: "PIECE_W",
+    th: "กว้างชิ้นงาน",
+    desc: "ความกว้างชิ้นงานที่พิมพ์/ไดคัท (ซม.) — วัดจาก die flat หรือ artboard หลังกางแบบ",
+    example: "9.0",
+    import: "→ ฟิลด์ pieceW ในใบเสนอราคา · ใช้คำนวณการวางชิ้นบนแผ่น",
+  },
+  {
+    key: "PIECE_H",
+    th: "สูงชิ้นงาน",
+    desc: "ความสูงชิ้นงาน (ซม.) — คู่กับ PIECE_W",
+    example: "5.4",
+    import: "→ ฟิลด์ pieceH · ใช้จัด imposition",
+  },
+  {
+    key: "BLEED",
+    th: "Bleed",
+    desc: "ขอบเลย (ซม.) รอบ artwork — ป้องกันขอบขาวหลังตัด ค่ามาตรฐาน 0.3",
+    example: "0.3",
+    import: "→ ฟิลด์ bleed · ขยาย cell ตอนคำนวณ layout",
+  },
+  {
+    key: "COLORS_F",
+    th: "สีหน้า",
+    desc: "จำนวนสีพิมพ์ด้านหน้า (เช่น 4 = CMYK, 1 = ดำ)",
+    example: "4",
+    import: "→ colorsFront · คิดค่าเพลท + ค่าพิมพ์",
+  },
+  {
+    key: "COLORS_B",
+    th: "สีหลัง",
+    desc: "จำนวนสีพิมพ์ด้านหลัง — ใส่ 0 ถ้าไม่พิมพ์หลัง",
+    example: "0",
+    import: "→ colorsBack",
+  },
+  {
+    key: "PERIMETER_CM",
+    th: "ความยาวไดคัท",
+    desc: "ความยาวรอบเส้นมีดไดคัทรวมทุกเส้น (ซม.) — อ่านจาก Document Info ใน Illustrator หรือรวม path length",
+    example: "86",
+    import: "→ คำนวณต้นทุนไดคัท: 1,500 + (perimeter × 8 × knife)",
+  },
+  {
+    key: "KNIFE",
+    th: "จำนวนมีด",
+    desc: "จำนวนชุดมีด/รูปแบบตัดในแบบ — ส่วนใหญ่ใส่ 1",
+    example: "1",
+    import: "→ คูณกับ PERIMETER_CM ในสูตรไดคัท",
+  },
+] as const;
+
 function Field({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
   return (
     <div className={wide ? "col-span-2" : ""}>
@@ -172,16 +224,18 @@ function TemplateSheet({ data, blank }: { data: typeof SAMPLE; blank: boolean })
         <div className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-slate-400">
           DIMENSIONS — ขนาดชิ้นงาน (หน่วย: ซม.)
         </div>
+        <p className="mb-2 text-[8px] leading-snug text-slate-500">
+          กรอกตัวเลขในตารางด้านล่าง — BmBox จะนำไปเติมฟอร์มประเมินราคาและคำนวณ layout / ต้นทุนไดคัทอัตโนมัติ
+        </p>
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-slate-50 text-left text-slate-500">
-              <th className="border border-slate-200 px-2 py-1.5">PIECE_W</th>
-              <th className="border border-slate-200 px-2 py-1.5">PIECE_H</th>
-              <th className="border border-slate-200 px-2 py-1.5">BLEED</th>
-              <th className="border border-slate-200 px-2 py-1.5">COLORS_F</th>
-              <th className="border border-slate-200 px-2 py-1.5">COLORS_B</th>
-              <th className="border border-slate-200 px-2 py-1.5">PERIMETER_CM</th>
-              <th className="border border-slate-200 px-2 py-1.5">KNIFE</th>
+              {DIMENSION_FIELDS.map((f) => (
+                <th key={f.key} className="border border-slate-200 px-1.5 py-1.5 align-top">
+                  <div className="font-semibold">{f.key}</div>
+                  <div className="mt-0.5 text-[7px] font-normal normal-case text-slate-400">{f.th}</div>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -196,8 +250,26 @@ function TemplateSheet({ data, blank }: { data: typeof SAMPLE; blank: boolean })
             </tr>
           </tbody>
         </table>
-        <p className="mt-1 text-[9px] text-slate-400">
-          PERIMETER_CM = ความยาวรอบเส้นไดคัทรวม (ซม.) · ใช้คำนวณต้นทุนไดคัทใน BmBox
+
+        {/* คำอธิบายแต่ละคอลัมน์ — แสดงบน template เมื่อพิมพ์/PDF */}
+        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[7px] leading-snug text-slate-500">
+          {DIMENSION_FIELDS.map((f) => (
+            <div key={f.key}>
+              <span className="font-semibold text-slate-600">{f.key}</span>
+              <span className="text-slate-400"> ({f.th})</span>
+              {" — "}
+              {f.desc}
+              {!blank && f.example && (
+                <span className="text-brand-600"> · ตัวอย่าง: {f.example}</span>
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-[8px] text-amber-800">
+          <span className="font-semibold">PERIMETER_CM สำคัญที่สุดสำหรับต้นทุนไดคัท</span>
+          {" — "}
+          ใน Illustrator: เลือกเส้นไดคัททั้งหมด → Window → Document Info → เลือก Objects → ดู Path Length (แปลงเป็น cm)
+          หรือใช้ปลั๊กอินรวมความยาว path · สูตร BmBox: 1,500 บาท (บล็อก) + PERIMETER_CM × 8 × KNIFE
         </p>
       </div>
 
@@ -295,6 +367,24 @@ export default function PackagingTemplateClient() {
             <li>Export เป็น PDF (Preserve editing / เก็บ vector)</li>
             <li>นำ PDF เข้า BmBox ที่หน้าสร้างใบเสนอราคา (รองรับเร็วๆ นี้)</li>
           </ol>
+
+          <div className="mt-4 border-t border-line pt-3">
+            <div className="text-xs font-semibold text-slate-700">ตาราง DIMENSIONS — ความหมายแต่ละช่อง</div>
+            <dl className="mt-2 space-y-2 text-xs">
+              {DIMENSION_FIELDS.map((f) => (
+                <div key={f.key} className="grid grid-cols-[5.5rem_1fr] gap-2">
+                  <dt className="font-mono font-semibold text-brand-700">{f.key}</dt>
+                  <dd>
+                    <span className="font-medium text-slate-700">{f.th}</span>
+                    {" — "}
+                    {f.desc}
+                    <span className="mt-0.5 block text-slate-400">{f.import}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
           <p className="mt-3 text-xs text-amber-700">
             ตอนนี้ import ได้จากไฟล์ <code className="rounded bg-amber-50 px-1">.bmboxpack.json</code> — PDF parser อยู่ระหว่างพัฒนา
           </p>
