@@ -1,42 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { baht, num, thaiDate } from "@/lib/format";
-import SalesChart, { type SalesPoint } from "@/components/SalesChart";
+import SalesChartPanel from "@/components/SalesChartPanel";
 import JobStatusBar from "@/components/JobStatusBar";
 import ExecutiveDashboard from "@/components/ExecutiveDashboard";
 import { buildExecutiveMetrics } from "@/lib/dashboard-executive";
+import { monthlySales } from "@/lib/sales-chart";
 import { requireUser } from "@/lib/auth/session";
 import { can, isRole } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
-
-const THAI_MONTH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-
-function monthlySales(rows: { issueDate: Date; total: number }[], months = 6): SalesPoint[] {
-  const now = new Date();
-  const buckets: SalesPoint[] = [];
-  const index = new Map<string, number>();
-  for (let i = months - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    index.set(key, buckets.length);
-    buckets.push({
-      label: `${THAI_MONTH[d.getMonth()]} ${String((d.getFullYear() + 543) % 100).padStart(2, "0")}`,
-      value: 0,
-      count: 0,
-    });
-  }
-  for (const r of rows) {
-    const d = new Date(r.issueDate);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    const idx = index.get(key);
-    if (idx != null) {
-      buckets[idx].value += r.total;
-      buckets[idx].count += 1;
-    }
-  }
-  return buckets;
-}
 
 export default async function Dashboard() {
   const user = await requireUser();
@@ -90,24 +63,10 @@ export default async function Dashboard() {
   ]);
 
   const stageCounts = jobStageGroups.map((g) => ({ stage: g.stage, count: g._count.id }));
-  const chartData = monthlySales(allForChart, 6);
-  const chartTotal = chartData.reduce((s, d) => s + d.value, 0);
+  const chart6m = monthlySales(allForChart, 6);
+  const chart1y = monthlySales(allForChart, 12);
 
-  const salesSection = (
-    <div className="card p-5">
-      <div className="mb-4 flex items-end justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-700">ยอดขายรายเดือน</h2>
-          <p className="text-xs text-slate-400">6 เดือนล่าสุด · มูลค่าจากใบเสนอราคา</p>
-        </div>
-        <div className="text-right">
-          <div className="text-xs text-slate-400">รวมในช่วง</div>
-          <div className="text-lg font-bold text-brand-700">{baht(chartTotal)}</div>
-        </div>
-      </div>
-      <SalesChart data={chartData} />
-    </div>
-  );
+  const salesChart = <SalesChartPanel data6m={chart6m} data1y={chart1y} />;
 
   if (isExecutive) {
     const metrics = buildExecutiveMetrics({
@@ -138,7 +97,7 @@ export default async function Dashboard() {
           metrics={metrics}
           jobs={recentJobs}
           showPrice={showPrice}
-          salesSection={showPrice ? salesSection : undefined}
+          salesChart={showPrice ? salesChart : undefined}
         />
       </div>
     );
@@ -169,7 +128,7 @@ export default async function Dashboard() {
         ))}
       </div>
 
-      {showPrice && salesSection}
+      {showPrice && salesChart}
 
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-line px-5 py-3">

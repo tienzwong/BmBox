@@ -31,12 +31,12 @@ export default function ExecutiveDashboard({
   metrics,
   jobs,
   showPrice,
-  salesSection,
+  salesChart,
 }: {
   metrics: ExecutiveMetrics;
   jobs: JobRow[];
   showPrice: boolean;
-  salesSection?: React.ReactNode;
+  salesChart?: React.ReactNode;
 }) {
   const m = metrics;
   const insight = executiveInsight(m);
@@ -59,6 +59,8 @@ export default function ExecutiveDashboard({
 
   return (
     <div className="space-y-5">
+      {showPrice && salesChart}
+
       {/* KPI row — REF style white cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (
@@ -226,8 +228,6 @@ export default function ExecutiveDashboard({
           </div>
         )}
       </div>
-
-      {showPrice && salesSection}
     </div>
   );
 }

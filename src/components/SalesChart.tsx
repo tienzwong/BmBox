@@ -27,7 +27,8 @@ export default function SalesChart({ data }: { data: SalesPoint[] }) {
   const ticks = 4;
 
   const slot = chartW / data.length;
-  const barW = Math.min(56, slot * 0.55);
+  const barW = Math.min(data.length > 8 ? 36 : 56, slot * 0.55);
+  const labelSize = data.length > 8 ? 9 : 11;
 
   return (
     <div className="w-full">
@@ -80,7 +81,7 @@ export default function SalesChart({ data }: { data: SalesPoint[] }) {
                   {compact(d.value)}
                 </text>
               )}
-              <text x={padL + slot * i + slot / 2} y={H - 14} textAnchor="middle" fontSize={11} fill="#64748b">
+              <text x={padL + slot * i + slot / 2} y={H - 14} textAnchor="middle" fontSize={labelSize} fill="#64748b">
                 {d.label}
               </text>
             </g>
