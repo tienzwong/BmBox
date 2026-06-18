@@ -1,5 +1,6 @@
 "use client";
 
+import { NavIcon, RAIL_ICON_NAMES, type NavIconName } from "@/components/icons/nav-icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,7 +10,7 @@ import NotificationBell from "@/components/NotificationBell";
 export interface NavLink {
   href: string;
   label: string;
-  icon: string;
+  icon: NavIconName;
   iconClass?: string;
 }
 
@@ -18,11 +19,6 @@ export interface NavSection {
   links: NavLink[];
 }
 
-const RAIL_ICONS: { symbol: string; emoji?: boolean }[] = [
-  { symbol: "▦" },
-  { symbol: "☰" },
-  { symbol: "✏️", emoji: true }, // วาดเส้น — emoji ปรับเป็นขาวด้วย invert
-];
 export default function AppShell({
   children,
   sections,
@@ -124,8 +120,8 @@ export default function AppShell({
                       : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
                   }`}
                 >
-                  <span className={`w-5 shrink-0 text-center ${link.iconClass ?? "text-brand-500"}`}>
-                    {link.icon}
+                  <span className={`flex w-5 shrink-0 justify-center ${link.iconClass ?? "text-brand-500"}`}>
+                    <NavIcon name={link.icon} className="h-4 w-4" />
                   </span>
                   {link.label}
                 </Link>
@@ -151,7 +147,7 @@ export default function AppShell({
 
           <nav className="flex flex-1 flex-col items-center gap-1 py-3">
             {sections.map((section, i) => {
-              const rail = RAIL_ICONS[i] ?? { symbol: "•" };
+              const railName = RAIL_ICON_NAMES[i] ?? "layout-dashboard";
               const sectionActive =
                 activeSection === i || section.links.some((l) => isActive(l.href));
               return (
@@ -160,21 +156,13 @@ export default function AppShell({
                   type="button"
                   title={section.title ?? section.links[0]?.label}
                   onClick={() => selectSection(i)}
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl text-lg transition ${
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
                     sectionActive
                       ? "bg-white/20 text-white shadow-sm"
                       : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  <span
-                    className={
-                      rail.emoji
-                        ? "inline-block text-base leading-none brightness-0 invert"
-                        : undefined
-                    }
-                  >
-                    {rail.symbol}
-                  </span>
+                  <NavIcon name={railName} className="h-5 w-5" />
                 </button>
               );
             })}
@@ -205,11 +193,11 @@ export default function AppShell({
                   }`}
                 >
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
                       isActive(link.href) ? "bg-brand-100 text-brand-700" : "bg-slate-100 text-slate-500"
                     } ${link.iconClass ?? ""}`}
                   >
-                    {link.icon}
+                    <NavIcon name={link.icon} className="h-4 w-4" />
                   </span>
                   <span className="truncate">{link.label}</span>
                 </Link>

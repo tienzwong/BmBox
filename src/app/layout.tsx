@@ -31,7 +31,7 @@ export default async function RootLayout({
   const sections: NavSection[] = user
     ? [
         {
-          links: [{ href: "/", label: "ภาพรวม", icon: "▦" }],
+          links: [{ href: "/", label: "ภาพรวม", icon: "layout-dashboard" as const }],
         },
         {
           title: "โมดูลงาน",
@@ -45,19 +45,19 @@ export default async function RootLayout({
         {
           title: "ข้อมูลหลัก",
           links: [
-            { href: "/papers", label: "คลังกระดาษ", icon: "▥", iconClass: "text-slate-400" },
-            { href: "/contacts", label: "สมุดรายชื่อ", icon: "◍", iconClass: "text-slate-400" },
+            { href: "/papers", label: "คลังกระดาษ", icon: "layers" as const, iconClass: "text-slate-400" },
+            { href: "/contacts", label: "สมุดรายชื่อ", icon: "book-user" as const, iconClass: "text-slate-400" },
             ...(can(user.role, "viewCost")
-              ? [{ href: "/costing/machines", label: "เครื่องจักร", icon: "⚙", iconClass: "text-slate-400" }]
+              ? [{ href: "/costing/machines", label: "เครื่องจักร", icon: "cog" as const, iconClass: "text-slate-400" }]
               : []),
             ...(can(user.role, "manageUsers")
               ? [
-                  { href: "/users", label: "ผู้ใช้งาน", icon: "◎", iconClass: "text-slate-400" },
-                  { href: "/settings/backup", label: "สำรองข้อมูล", icon: "⛁", iconClass: "text-slate-400" },
+                  { href: "/users", label: "ผู้ใช้งาน", icon: "users" as const, iconClass: "text-slate-400" },
+                  { href: "/settings/backup", label: "สำรองข้อมูล", icon: "database-backup" as const, iconClass: "text-slate-400" },
                 ]
               : []),
             ...(can(user.role, "manageMasterData") || can(user.role, "manageUsers")
-              ? [{ href: "/settings/architecture", label: "โครงสร้างระบบ", icon: "◈", iconClass: "text-slate-400" }]
+              ? [{ href: "/settings/architecture", label: "โครงสร้างระบบ", icon: "network" as const, iconClass: "text-slate-400" }]
               : []),
           ],
         },
